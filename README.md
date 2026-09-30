@@ -46,6 +46,21 @@ README), marketplace packs and the strats inside them get an upvote button (the 
 that came from a pack). One vote per install; the bot tallies them into the catalog, and "Top rated" sorts
 by them. Your own strats have no vote button: only published ("original") strats can be voted on.
 
+**Clips**: drop a video (mp4, webm, mov) on a step and the app turns it into a GIF right there, in the
+browser: 10 frames a second, up to 8 seconds, 512 px wide, one 256-colour palette. It is stored as a
+`.gif`, travels in packs as it is (GIFs are already compressed), and the overlay plays it like any other
+picture. A clip can be held at a close-up (Permanent zoom) but never pulses. A `.gif` file is taken as is.
+
+**Mid**: strats that are not post-plants (smokes, one-ways, flashes, recon, setups, entries, deny space)
+can be placed at **Mid** as well as at a site.
+
+**Settings** (the gear): which screen the overlay shows on, its size (a slider; the card and everything on
+it scale together, and a running overlay restarts to apply it) and the screen corner it sits in.
+
+**Feedback**: the Discord button's menu has "Send feedback": a text box that posts to a private channel
+on the Stratlab Discord through a webhook set as `"feedback"` in `version.json`, with the app version and
+a short install id attached.
+
 **Display mode**: the overlay is a window on top of the game, so Valorant must run in **Windowed
 Fullscreen** (Settings › Video › General › Display Mode). The app reads the game's own settings file and
 shows an amber **Fullscreen** warning next to the Overlay button while the game is set to exclusive

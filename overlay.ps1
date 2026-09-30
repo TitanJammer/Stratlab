@@ -1,4 +1,4 @@
-﻿# Valorant lineup overlay.
+# Valorant lineup overlay.
 # A compact translucent card in the top-right of the screen, above Valorant's performance
 # graphs: a large media preview on the left, a five-line readout beside it (map, agent, option,
 # lineup, step) and the lineup title + step caption underneath. Click-through; hotkeys only.
@@ -210,6 +210,8 @@ public class MediaAnimator : IDisposable
     int dirX, dirY;   // slide direction: (1,0) new slide enters from the right, (0,1) from below, (0,0) crossfade
 
     bool hold;   // true: the picture stays at its close-up (no pulse)
+    bool clip;   // an animated GIF held at its close-up: every frame is drawn zoomed (ImageAnimator steps the frames)
+    EventHandler onFrame;
 
     // Show img, crossfading from the snapshot if given; then zoom on (fx, fy) if zoom is set:
     // pulsing in and out, or, with hold, sitting at the close-up.
@@ -218,6 +220,7 @@ public class MediaAnimator : IDisposable
         Stop();
         final = img; dirX = dx; dirY = dy; this.hold = hold;
         zooming = zoom && img != null && factor > 1;
+        clip = zooming && hold && ImageAnimator.CanAnimate(img);
         if (zooming)
         {
             int sw = (int)Math.Min(img.Width, W * factor * 1.25);          // enough pixels for the closest zoom, no more
@@ -226,6 +229,7 @@ public class MediaAnimator : IDisposable
             using (var g = Graphics.FromImage(zoomSrc)) { g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.DrawImage(img, 0, 0, sw, sh); }
             this.fx = fx; this.fy = fy; this.factor = factor; this.period = period; zt = 0;
         }
+        if (clip) { onFrame = (s, e) => { }; ImageAnimator.Animate(img, onFrame); }
         Bitmap prevShown = shown; shown = null;
         if (fromSnapshot != null && img != null)
         {
@@ -238,7 +242,7 @@ public class MediaAnimator : IDisposable
         {
             if (fromSnapshot != null) fromSnapshot.Dispose();
             tt = -1;
-            if (zooming && hold)
+            if (zooming && hold && !clip)
             {   // a held close-up is one still frame: draw it once, no timer (so it can use the best filter)
                 shown = new Bitmap(W, H);
                 using (var g = Graphics.FromImage(shown)) { g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.PixelOffsetMode = PixelOffsetMode.HighQuality; DrawZoomWith(g, factor); }
@@ -263,10 +267,11 @@ public class MediaAnimator : IDisposable
         g.InterpolationMode = InterpolationMode.Bilinear; g.PixelOffsetMode = PixelOffsetMode.Half;   // animated frames: fast filter
         DrawZoomWith(g, sc);
     }
-    void DrawZoomWith(Graphics g, double sc)   // uses whatever filter the caller set
+    void DrawZoomWith(Graphics g, double sc) { DrawZoomWith(g, sc, zoomSrc); }   // uses whatever filter the caller set
+    void DrawZoomWith(Graphics g, double sc, Image src)   // src: the prepared still, or the clip's current frame
     {
-        double f = Math.Min((double)W / zoomSrc.Width, (double)H / zoomSrc.Height);
-        double dw = zoomSrc.Width * f, dh = zoomSrc.Height * f;
+        double f = Math.Min((double)W / src.Width, (double)H / src.Height);
+        double dw = src.Width * f, dh = src.Height * f;
         double ox = (W - dw) / 2, oy = (H - dh) / 2;
         double px = ox + fx * dw, py = oy + fy * dh;
         double nw = dw * sc, nh = dh * sc;
@@ -274,7 +279,7 @@ public class MediaAnimator : IDisposable
         if (nw >= W) nx = Math.Min(0, Math.Max(W - nw, nx));      // no gaps once the picture covers the frame
         if (nh >= H) ny = Math.Min(0, Math.Max(H - nh, ny));
         g.Clear(Color.Black);
-        g.DrawImage(zoomSrc, new RectangleF((float)nx, (float)ny, (float)nw, (float)nh));
+        g.DrawImage(src, new RectangleF((float)nx, (float)ny, (float)nw, (float)nh));
     }
 
     void Tick(object s, EventArgs e)
@@ -304,7 +309,7 @@ public class MediaAnimator : IDisposable
                     pic.Image = b;
                     return;
                 }
-                if (!zooming || hold)
+                if ((!zooming || hold) && !clip)
                 {   // keep the fade's final frame on screen (the fitted picture, or the held close-up): no jump
                     if (shown != null) shown.Dispose();
                     shown = to; to = null; pic.Image = shown;
@@ -312,7 +317,13 @@ public class MediaAnimator : IDisposable
                 }
                 EndTransition();
             }
-            if (zooming)
+            if (clip)
+            {   // the clip's current frame, held at the close-up
+                ImageAnimator.UpdateFrames(final);
+                DrawZoomWith(g, factor, final);
+                pic.Image = b;
+            }
+            else if (zooming)
             {
                 zt += dt;
                 DrawZoom(g, ZoomScale(zt % ZoomPeriod()));
@@ -346,6 +357,7 @@ public class MediaAnimator : IDisposable
     public void Stop()
     {
         timer.Stop(); EndTransition(); zooming = false;
+        if (clip) { try { ImageAnimator.StopAnimate(final, onFrame); } catch { } clip = false; }
         if (zoomSrc != null) { zoomSrc.Dispose(); zoomSrc = null; }
     }
     public void Dispose() { Stop(); timer.Dispose(); buf[0].Dispose(); buf[1].Dispose(); if (shown != null) shown.Dispose(); }
@@ -408,6 +420,7 @@ if (Test-Path $configPath) {
     if ($null -ne $j.onlyInGame) { $cfg.onlyInGame = [bool]$j.onlyInGame }
     if ($j.hotkeys)   { foreach ($p in $j.hotkeys.PSObject.Properties)   { if ($cfg.hotkeys.Contains($p.Name)) { $cfg.hotkeys[$p.Name] = [string]$p.Value } } }
 }
+if ($ScreenshotPath -and $env:LINEUP_TEST_WIDTH) { $cfg.width = [int]$env:LINEUP_TEST_WIDTH }   # test renders at other sizes, config untouched
 function Save-Config {
     [ordered]@{ monitor = $cfg.monitor; width = $cfg.width; anchor = $cfg.anchor; offsetX = $cfg.offsetX; offsetY = $cfg.offsetY
                 autoDetect = $cfg.autoDetect; autoShow = $cfg.autoShow; onlyInGame = $cfg.onlyInGame; hotkeys = $cfg.hotkeys } | ConvertTo-Json | Set-Content $configPath -Encoding UTF8
@@ -445,17 +458,22 @@ function C([string]$hex) { [System.Drawing.ColorTranslator]::FromHtml($hex) }
 function P([int]$x, [int]$y) { New-Object System.Drawing.Point $x, $y }
 $CLR_BG = C '#0c0c0c'; $CLR_TEXT = C '#f2f2f2'; $CLR_DIM = C '#9a9a9a'; $CLR_KEY = C '#6e6e6e'; $CLR_AUTO = C '#6fbf73'
 $CLR_ROW = C '#171717'
+# size: config.json "width" (the app's Settings slider) sets the card's width; everything else, fonts
+# included, scales with it from the 372 px design, so a wider card is a bigger card, not a stretched one
+$WIDTH = [Math]::Min(900, [Math]::Max(280, [int]$cfg.width))
+$S = $WIDTH / 372.0
+function Px([double]$v) { [int][Math]::Round($v * $S) }
+function Fs([double]$pt) { [float][Math]::Round($pt * $S, 1) }
 # type: Bahnschrift (the DIN face that ships with Windows), matching Valorant's DIN-style UI
-$FONT_T = New-Object System.Drawing.Font 'Bahnschrift SemiBold', 10  # lineup title
-$FONT_V = New-Object System.Drawing.Font 'Bahnschrift SemiBold', 8   # row values
-$FONT   = New-Object System.Drawing.Font 'Bahnschrift', 8.5          # caption
-$FONT_K = New-Object System.Drawing.Font 'Bahnschrift', 7            # keys
+$FONT_T = New-Object System.Drawing.Font 'Bahnschrift SemiBold', (Fs 10)  # lineup title
+$FONT_V = New-Object System.Drawing.Font 'Bahnschrift SemiBold', (Fs 8)   # row values
+$FONT   = New-Object System.Drawing.Font 'Bahnschrift', (Fs 8.5)          # caption
+$FONT_K = New-Object System.Drawing.Font 'Bahnschrift', (Fs 7)            # keys
 
 # layout: media left, readout column right, title + caption under both
-$WIDTH = [Math]::Max(300, [int]$cfg.width)
-$PAD = 8; $RADIUS = 12; $GAP = 3
+$PAD = Px 8; $RADIUS = Px 12; $GAP = [Math]::Max(2, (Px 3))
 $INNER = $WIDTH - 2 * $PAD
-$MENU_W = 108                          # narrow readout column: most of the width goes to the video
+$MENU_W = Px 108                       # narrow readout column: most of the width goes to the video
 $MEDIA_W = $INNER - $MENU_W - $PAD; $MEDIA_H = [int]($MEDIA_W * 9 / 16)
 $MX = $PAD + $MEDIA_W + $PAD
 $ROW_H = [int](($MEDIA_H - 4 * $GAP) / 5)
@@ -506,11 +524,11 @@ $pic = New-Object System.Windows.Forms.PictureBox
 $pic.Location = P $PAD $PAD
 $pic.Size = New-Object System.Drawing.Size $MEDIA_W, $MEDIA_H
 $pic.SizeMode = 'Zoom'; $pic.BackColor = C '#000000'
-Set-Rounded $pic 8
+Set-Rounded $pic (Px 8)
 $form.Controls.Add($pic)
-$badge = Add-Label '' 6 6 28 14 $FONT_K $CLR_TEXT 'MiddleCenter' $pic
+$badge = Add-Label '' (Px 6) (Px 6) (Px 28) (Px 14) $FONT_K $CLR_TEXT 'MiddleCenter' $pic
 $badge.BackColor = C '#2a2a2a'; $badge.Visible = $false
-Set-Rounded $badge 4
+Set-Rounded $badge (Px 4)
 $anim = New-Object MediaAnimator $pic, $MEDIA_W, $MEDIA_H   # compiled slide transition + zoom pulse
 
 # top of the column: MAP and AGENT as two side-by-side blocks. Both are automatic, so no keys;
@@ -519,14 +537,14 @@ $BLK_H = 2 * $ROW_H + $GAP; $BLK_W = [int](($MENU_W - $GAP) / 2)
 function Add-Block([int]$x, [string]$caption) {
     $b = New-Object System.Windows.Forms.Panel
     $b.Location = P $x $PAD; $b.Size = New-Object System.Drawing.Size $BLK_W, $BLK_H; $b.BackColor = $CLR_ROW
-    Set-Rounded $b 5
+    Set-Rounded $b (Px 5)
     $form.Controls.Add($b)
     # no caption: the content says what it is. Picture fills the block; map name sits centred on its banner.
     $ic = New-Object System.Windows.Forms.PictureBox
     $ic.Location = P 0 0; $ic.Size = New-Object System.Drawing.Size $BLK_W, $BLK_H; $ic.SizeMode = 'Zoom'; $ic.BackColor = 'Transparent'; $ic.Visible = $false
     $b.Controls.Add($ic)
     $val = Add-Label '' 2 0 ($BLK_W - 4) $BLK_H $FONT_V $CLR_TEXT 'MiddleCenter' $b
-    $dot = Add-Label ([string][char]0x25CF) ($BLK_W - 11) 0 10 10 $FONT_K $CLR_AUTO 'MiddleCenter' $b   # ● = detected
+    $dot = Add-Label ([string][char]0x25CF) ($BLK_W - (Px 11)) 0 (Px 10) (Px 10) $FONT_K $CLR_AUTO 'MiddleCenter' $b   # ● = detected
     $dot.Visible = $false
     @{ panel = $b; dot = $dot; icon = $ic; val = $val }
 }
@@ -563,7 +581,7 @@ function Get-MapBackdrop([string]$mapName) {
         # over the picture used ClearType, which renders differently over bright banners like Summit's
         $g.TextRenderingHint = 'AntiAliasGridFit'
         $fmt = New-Object System.Drawing.StringFormat; $fmt.Alignment = 'Center'; $fmt.LineAlignment = 'Center'
-        $nameFont = New-Object System.Drawing.Font 'Bahnschrift SemiBold Condensed', 9.5
+        $nameFont = New-Object System.Drawing.Font 'Bahnschrift SemiBold Condensed', (Fs 9.5)
         $rect = New-Object System.Drawing.RectangleF 0, 0, $BLK_W, $BLK_H
         $shadowRect = New-Object System.Drawing.RectangleF 0, 1, $BLK_W, $BLK_H
         $g.DrawString($mapName.ToUpper(), $nameFont, (New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(200, 0, 0, 0))), $shadowRect, $fmt)
@@ -627,7 +645,7 @@ function Set-Block($blk, [string]$text, $iconImg, [bool]$auto, $backdrop = $null
 # below the blocks: three one-line rows (option, lineup, step): key at left, value, and a
 # right-hand slot for arrows. Labels never overlap: a transparent WinForms label paints the
 # parent background over siblings.
-$KEY_W = 4; $SLOT_W = 26; $ICON_PX = 16   # KEY_W is now just left padding for the row text
+$KEY_W = Px 4; $SLOT_W = Px 26; $ICON_PX = Px 16   # KEY_W is now just left padding for the row text
 $rows = @()
 $rowKeys = @('', '', '')   # no key on the option row (the number keys are unbound)
 # the right-hand slot of the lineup and step rows draws two little key caps: [↑][↓] and [←][→]
@@ -636,7 +654,7 @@ $ry = $PAD + $BLK_H + $GAP
 for ($i = 0; $i -lt 3; $i++) {
     $r = New-Object System.Windows.Forms.Panel
     $r.Location = P $MX $ry; $r.Size = New-Object System.Drawing.Size $MENU_W, $ROW_H; $r.BackColor = $CLR_ROW
-    Set-Rounded $r 5
+    Set-Rounded $r (Px 5)
     $form.Controls.Add($r)
     $key  = Add-Label $rowKeys[$i] 4 0 $KEY_W $ROW_H $FONT_K $CLR_KEY 'MiddleLeft' $r
     $slot = Add-Label '' ($MENU_W - $SLOT_W - 3) 0 $SLOT_W $ROW_H $FONT_K $CLR_DIM 'MiddleRight' $r
@@ -646,7 +664,7 @@ for ($i = 0; $i -lt 3; $i++) {
         param($sender, $ev)
         $caps = $sender.Tag; if (-not $caps) { return }
         $g = $ev.Graphics; $g.SmoothingMode = 'AntiAlias'; $g.TextRenderingHint = 'ClearTypeGridFit'
-        $cap = 11; $gap = 2; $y0 = [int](($sender.Height - $cap) / 2)
+        $cap = Px 11; $gap = Px 2; $y0 = [int](($sender.Height - $cap) / 2)
         $x0 = $sender.Width - ($caps.Count * $cap + ($caps.Count - 1) * $gap) - 1
         $pen = New-Object System.Drawing.Pen $CLR_KEY, 1
         $brush = New-Object System.Drawing.SolidBrush $CLR_DIM
@@ -666,22 +684,22 @@ for ($i = 0; $i -lt 3; $i++) {
 }
 
 # title (with ability icon) + caption across the full width; "0 hide" at the end of the title row
-$y = $PAD + $MEDIA_H + $PAD - 2
+$y = $PAD + $MEDIA_H + $PAD - (Px 2)
 $hideText = "$(Key-Label $hk.toggle) hide"
-$hw = (Text-Width $hideText $FONT_K) + 4
+$hw = (Text-Width $hideText $FONT_K) + (Px 4)
 $abilityIcon = New-Object System.Windows.Forms.PictureBox
-$abilityIcon.Location = P $PAD ($y + 1); $abilityIcon.Size = New-Object System.Drawing.Size 18, 18; $abilityIcon.SizeMode = 'Zoom'; $abilityIcon.BackColor = 'Transparent'
+$abilityIcon.Location = P $PAD ($y + 1); $abilityIcon.Size = New-Object System.Drawing.Size (Px 18), (Px 18); $abilityIcon.SizeMode = 'Zoom'; $abilityIcon.BackColor = 'Transparent'
 $form.Controls.Add($abilityIcon)
-$lblTitle = Add-Label '' ($PAD + 23) $y ($INNER - 23 - $hw - 6) 20 $FONT_T $CLR_TEXT
-Add-Label $hideText ($PAD + $INNER - $hw) $y $hw 20 $FONT_K $CLR_KEY 'MiddleRight' | Out-Null
-$y += 21
-$lblCaption = Add-Label '' $PAD $y ($INNER - 164) 16 $FONT $CLR_DIM 'MiddleLeft'
+$lblTitle = Add-Label '' ($PAD + (Px 23)) $y ($INNER - (Px 23) - $hw - (Px 6)) (Px 20) $FONT_T $CLR_TEXT
+Add-Label $hideText ($PAD + $INNER - $hw) $y $hw (Px 20) $FONT_K $CLR_KEY 'MiddleRight' | Out-Null
+$y += Px 21
+$lblCaption = Add-Label '' $PAD $y ($INNER - (Px 164)) (Px 16) $FONT $CLR_DIM 'MiddleLeft'
 $lblCaption.AutoEllipsis = $true   # a long step note ends in "..." instead of running under the difficulty
-$lblDiff = Add-Label '' ($PAD + $INNER - 160) $y 160 16 (New-Object System.Drawing.Font 'Bahnschrift SemiBold', 8) $CLR_DIM 'MiddleRight'   # difficulty, in its colour
-$y += 15
+$lblDiff = Add-Label '' ($PAD + $INNER - (Px 160)) $y (Px 160) (Px 16) (New-Object System.Drawing.Font 'Bahnschrift SemiBold', (Fs 8)) $CLR_DIM 'MiddleRight'   # difficulty, in its colour
+$y += Px 15
 # speed (post-plants only) stacked under the difficulty, in its own blue family so it never reads as difficulty
-$lblSpeed = Add-Label '' ($PAD + $INNER - 160) $y 160 13 (New-Object System.Drawing.Font 'Bahnschrift SemiBold', 7.5) $CLR_DIM 'MiddleRight'
-$y += 13 + $PAD - 3
+$lblSpeed = Add-Label '' ($PAD + $INNER - (Px 160)) $y (Px 160) (Px 13) (New-Object System.Drawing.Font 'Bahnschrift SemiBold', (Fs 7.5)) $CLR_DIM 'MiddleRight'
+$y += (Px 13) + $PAD - (Px 3)
 # strat types as shown in the overlay (keys match TYPES in web\editor.html)
 # ('smoke' shows as "smokes": "optimal smokes" is too wide for the row)
 $TYPE_NAMES = @{ 'post-plant' = 'post-plant'; 'entry' = 'entry'; 'smoke' = 'smokes'; 'one-way' = 'one-way'; 'flash' = 'flash'; 'recon' = 'recon'; 'setup' = 'site setup'; 'deny' = 'deny space' }
@@ -724,7 +742,7 @@ function Place-OnMonitor {
 $tabForm = New-Object OverlayForm
 $tabForm.Text = 'Valorant Lineups types'; $tabForm.FormBorderStyle = 'None'; $tabForm.TopMost = $true
 $tabForm.ShowInTaskbar = $false; $tabForm.StartPosition = 'Manual'; $tabForm.BackColor = $CLR_BG; $tabForm.Opacity = 0.94
-$TB_H = 20; $TB_GAP = 5; $TB_PAD = 9
+$TB_H = Px 20; $TB_GAP = Px 5; $TB_PAD = Px 9
 $ST.tbItems = @()
 # double-buffered painting (off-screen, then one blit): switching tabs and the highlight glide must not flicker.
 # DoubleBuffered / SetStyle are protected, hence reflection.
@@ -756,7 +774,7 @@ function Update-TypeBlocks {
         $labels += @{ text = "$nm $cnt"; key = $false; on = ($one -or $ST.typeTab -eq $tv) }
     }
     $x = 0; $items = @()
-    foreach ($lb in $labels) { $w = (Text-Width $lb.text $(if ($lb.key) { $FONT_K } else { $FONT_V })) + 2 * $TB_PAD - 6; $items += @{ x = $x; w = $w; text = $lb.text; key = $lb.key; on = $lb.on }; $x += $w + $TB_GAP }
+    foreach ($lb in $labels) { $w = (Text-Width $lb.text $(if ($lb.key) { $FONT_K } else { $FONT_V })) + 2 * $TB_PAD - (Px 6); $items += @{ x = $x; w = $w; text = $lb.text; key = $lb.key; on = $lb.on }; $x += $w + $TB_GAP }
     # highlight: glide from the old block to the new one in 0.12 s when only the pick changed; jump otherwise
     $onItem = $items | Where-Object { $_.on } | Select-Object -First 1
     $sameLayout = $ST.tbItems -and $ST.tbItems.Count -eq $items.Count -and (@($ST.tbItems | ForEach-Object { $_.text }) -join '|') -eq (@($items | ForEach-Object { $_.text }) -join '|')
@@ -772,7 +790,7 @@ function Update-TypeBlocks {
     if (-not $sameLayout -or $tabForm.ClientSize.Width -ne $totalW) {
         $tabForm.ClientSize = New-Object System.Drawing.Size $totalW, $TB_H
         # each block is its own rounded shape: the window's region is their union, so they float apart
-        $path = New-Object System.Drawing.Drawing2D.GraphicsPath; $d = 12
+        $path = New-Object System.Drawing.Drawing2D.GraphicsPath; $d = [Math]::Min($TB_H, (Px 12))
         foreach ($it in $items) {
             $path.StartFigure()
             $path.AddArc($it.x, 0, $d, $d, 180, 90); $path.AddArc($it.x + $it.w - $d, 0, $d, $d, 270, 90)
@@ -884,9 +902,9 @@ function Set-Image([string]$path, $zoom = $null, [bool]$fade = $false) {
         $ST.image = $null
     }
     $z = Parse-Zoom $zoom
-    if ($z.on -and $ST.image) {   # stills only; an animated GIF keeps playing as-is
+    if ($z.on -and $ST.image) {   # an animated GIF (a clip) can be held at a close-up, but never pulses
         $frames = $ST.image.GetFrameCount((New-Object System.Drawing.Imaging.FrameDimension ($ST.image.FrameDimensionsList[0])))
-        if ($frames -gt 1) { $z.on = $false }
+        if ($frames -gt 1 -and -not $z.hold) { $z.on = $false }
     }
     $anim.Show($ST.image, $from, [int]$ST.dir[0], [int]$ST.dir[1], $z.on, $z.fx, $z.fy, $z.factor, 4.5, [bool]$z.hold)
     $ST.dir = @(0, 0)   # direction is set by the key that caused the change; anything else crossfades

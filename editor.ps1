@@ -65,6 +65,36 @@ function Set-Monitor($req) {
     $c | ConvertTo-Json -Depth 5 | Set-Content $configPath -Encoding UTF8
     [ordered]@{ ok = $true; current = $n }
 }
+# overlay settings the app exposes (config.json): the card's width (its size: everything scales with it,
+# 372 = the design size) and the screen corner it sits in. A running overlay lays itself out at start, so a
+# width change restarts it (the corner and the monitor it picks up live from the file).
+function Get-Settings {
+    $c = if (Test-Path $configPath) { try { Read-Json $configPath } catch { $null } } else { $null }
+    $w = 372; if ($c -and "$($c.width)" -match '^\d+$') { $w = [int]$c.width }
+    $a = 'top-right'; if ($c -and "$($c.anchor)" -match '^(top|bottom)-(left|right)$') { $a = [string]$c.anchor }
+    [ordered]@{ width = $w; anchor = $a }
+}
+function Overlay-Pid { $pf = Join-Path $root 'overlay.pid'; if (Test-Path $pf) { try { (Get-Process -Id ([int](Get-Content $pf -Raw).Trim()) -ErrorAction Stop).Id } catch { $null } } else { $null } }
+function Restart-Overlay {
+    $opid = Overlay-Pid; if (-not $opid) { return $false }
+    Stop-Process -Id $opid -Force -ErrorAction SilentlyContinue; Remove-Item (Join-Path $root 'overlay.pid') -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 400
+    Start-Process wscript.exe -ArgumentList "`"$(Join-Path $root 'overlay.vbs')`"" -WorkingDirectory $root
+    $true
+}
+function Set-Settings($req) {
+    $c = if (Test-Path $configPath) { Read-Json $configPath } else { [pscustomobject]@{} }
+    $set = { param($k, $v) if ($c.PSObject.Properties[$k]) { $c.$k = $v } else { $c | Add-Member -NotePropertyName $k -NotePropertyValue $v } }
+    $restart = $false
+    if ($null -ne $req.width) {
+        $w = [int][Math]::Round([double]$req.width); if ($w -lt 280 -or $w -gt 900) { throw 'Width must be between 280 and 900' }
+        $old = (Get-Settings).width; & $set 'width' $w; if ($w -ne $old) { $restart = $true }
+    }
+    if ($req.anchor) { $a = [string]$req.anchor; if ($a -notmatch '^(top|bottom)-(left|right)$') { throw 'Bad corner' }; & $set 'anchor' $a }
+    $c | ConvertTo-Json -Depth 5 | Set-Content $configPath -Encoding UTF8
+    $restarted = if ($restart) { Restart-Overlay } else { $false }
+    $out = Get-Settings; $out['restarted'] = [bool]$restarted; $out
+}
 function Write-Data($data) { $data | ConvertTo-Json -Depth 10 | Set-Content $dataPath -Encoding UTF8 }
 
 function Get-State {
@@ -123,8 +153,9 @@ function Save-Lineup($req) {
             $zooms.Add($z)
             $times.Add($(if ($p.dur) { [Math]::Round([double]$p.dur, 1) } else { 1.8 }))
             if ($p.src) { $srcs += [string]$p.src; continue }                       # existing picture, kept
-            $dest = Join-Path $assets "$id-$fileName-$k.png"
-            $n = $k; while (Test-Path $dest) { $n++; $dest = Join-Path $assets "$id-$fileName-$n.png" }
+            $ext = if (([string]$p.data) -match '^data:image/gif[;,]') { 'gif' } else { 'png' }   # a clip arrives as a GIF and stays one
+            $dest = Join-Path $assets "$id-$fileName-$k.$ext"
+            $n = $k; while (Test-Path $dest) { $n++; $dest = Join-Path $assets "$id-$fileName-$n.$ext" }
             $b64 = ([string]$p.data) -replace '^data:[^,]*,', ''
             [IO.File]::WriteAllBytes($dest, [Convert]::FromBase64String($b64))
             $srcs += ('assets/' + (Split-Path $dest -Leaf))
@@ -243,7 +274,7 @@ function Delete-PackDef($req) {   # { id, withStrats }: drop the pack; with with
         $removed = @($data.lineups | Where-Object { $gone -contains $_.id }).Count
         $data.lineups = @($data.lineups | Where-Object { $gone -notcontains $_.id })
         Write-Data $data
-        foreach ($g in $gone) { Get-ChildItem $assets -Filter "$g-pk*.jpg" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue }   # pictures that came with the pack
+        foreach ($g in $gone) { Get-ChildItem $assets -Filter "$g-pk*.*" -ErrorAction SilentlyContinue | Where-Object { $_.Extension -match '^\.(jpg|gif)$' } | Remove-Item -Force -ErrorAction SilentlyContinue }   # pictures that came with the pack
         foreach ($o in $packs) { if ($o.id -ne $id -and $o.ids) { $o.ids = [object[]]@(@($o.ids) | Where-Object { $gone -notcontains [string]$_ }) } }
     }
     Write-Packs @($packs | Where-Object { $_.id -ne $id })
@@ -275,7 +306,9 @@ function Export-Pack($req) {
                 $srcs = @(foreach ($src in @($stp.src)) {
                     $file = [IO.Path]::GetFullPath((Join-Path $root (([string]$src) -replace '/', '\')))
                     if (-not $file.StartsWith($assets, [StringComparison]::OrdinalIgnoreCase) -or -not (Test-Path $file)) { throw "Missing picture for '$($L.title)'" }
-                    $n++; Zip-Add $zip "pics/$n.jpg" (Pic-Jpeg $file); "pics/$n.jpg"
+                    $n++
+                    if ($file -match '\.gif$') { Zip-Add $zip "pics/$n.gif" ([IO.File]::ReadAllBytes($file)); "pics/$n.gif" }   # a clip travels as it is
+                    else { Zip-Add $zip "pics/$n.jpg" (Pic-Jpeg $file); "pics/$n.jpg" }
                 })
                 $stp.src = if ($srcs.Count -eq 1) { $srcs[0] } else { [object[]]$srcs }
             }
@@ -300,7 +333,7 @@ function Read-Pack([byte[]]$bytes) {
             $nm = $en.FullName -replace '\\', '/'
             if ($nm.EndsWith('/')) { continue }                                          # folder entry
             $cap = if ($nm -eq 'manifest.json' -or $nm -eq 'strats.json') { $PACK_MAX_JSON }
-                   elseif ($nm -match '^pics/[A-Za-z0-9_-]{1,40}\.(jpg|jpeg|png)$') { $PACK_MAX_PIC }
+                   elseif ($nm -match '^pics/[A-Za-z0-9_-]{1,40}\.(jpg|jpeg|png|gif)$') { $PACK_MAX_PIC }
                    else { throw "Unexpected file in pack: $nm" }                          # nothing else is allowed in
             $st = $en.Open(); $ms = New-Object IO.MemoryStream; $chunk = New-Object byte[] 65536
             try { while (($r = $st.Read($chunk, 0, $chunk.Length)) -gt 0) { $ms.Write($chunk, 0, $r); if ($ms.Length -gt $cap) { throw "File too big in pack: $nm" } } } finally { $st.Dispose() }
@@ -324,7 +357,8 @@ function Read-Pack([byte[]]$bytes) {
         if (-not ($game.agents | Where-Object { $_.name -eq $agent })) { throw "Unknown agent in pack: '$agent'" }
         if (@($game.maps) -notcontains $map) { throw "Unknown map in pack: '$map'" }
         $type = ([string]$s.type).ToLower(); if ($PACK_TYPES -notcontains $type) { $type = 'post-plant' }
-        $site = ([string]$s.site).ToUpper(); if ($site -notmatch '^[ABC]$') { throw "Bad site in pack: '$site'" }
+        $site = ([string]$s.site).ToUpper(); if ($site -notmatch '^([ABC]|MID)$') { throw "Bad site in pack: '$site'" }
+        if ($site -eq 'MID') { $site = 'Mid'; if ($type -eq 'post-plant') { throw 'A post-plant cannot be at Mid' } }   # Mid: any type but post-plant
         $stepsIn = @($s.steps); if ($stepsIn.Count -lt 1 -or $stepsIn.Count -gt 5) { throw "A strat in the pack has $($stepsIn.Count) steps (1 to 5 allowed)" }
         $steps = @(foreach ($stp in $stepsIn) {
             $srcs = @($stp.src | ForEach-Object { [string]$_ })
@@ -380,11 +414,11 @@ function Import-Pack([byte[]]$bytes) {
             $base = "$(Slug $s.agent)-$(Slug $s.map)-$($s.site.ToLower())-$($s.type -replace '-', '')"
             $n = 1; while ($data.lineups | Where-Object { $_.id -eq "$base-$n" }) { $n++ }; "$base-$n"
         }
-        if ($has) { Get-ChildItem $assets -Filter "$id-pk*.jpg" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue }   # the pack's old pictures of this strat
+        if ($has) { Get-ChildItem $assets -Filter "$id-pk*.*" -ErrorAction SilentlyContinue | Where-Object { $_.Extension -match '^\.(jpg|gif)$' } | Remove-Item -Force -ErrorAction SilentlyContinue }   # the pack's old pictures of this strat
         $k = 0; $map = @{}
         foreach ($stp in $s.steps) {
             $new = @(foreach ($src in @($stp.src)) {
-                if (-not $map.ContainsKey($src)) { $k++; $fn = "$id-pk$k.jpg"; [IO.File]::WriteAllBytes((Join-Path $assets $fn), $p.files[$src]); $map[$src] = "assets/$fn" }
+                if (-not $map.ContainsKey($src)) { $k++; $fn = "$id-pk$k." + $(if ($src -match '\.gif$') { 'gif' } else { 'jpg' }); [IO.File]::WriteAllBytes((Join-Path $assets $fn), $p.files[$src]); $map[$src] = "assets/$fn" }
                 $map[$src]
             })
             $stp.src = if ($new.Count -eq 1) { $new[0] } else { [object[]]$new }
@@ -541,6 +575,20 @@ function Send-Vote($req) {
     Write-Votes $v
     @{ voted = $up }
 }
+# feedback: what the user typed in the app's Feedback box, posted through a webhook (version.json
+# "feedback") into a private Discord channel, with the app version and a short install id (not a name)
+function Send-Feedback($req) {
+    $hook = [string]$APP.feedback
+    if (-not $hook -or $hook -notmatch '^https://(discord\.com|discordapp\.com)/api/webhooks/\d+/[A-Za-z0-9_-]+$') { throw 'Feedback is not set up in this build' }
+    $text = Clip-Text $req.text 1500; if ($text.Length -lt 3) { throw 'Write a little more first' }
+    $who = Clip-Text $req.contact 60; if (-not $who) { $who = 'anonymous' }
+    $inst = (Read-Votes).installId.Substring(0, 8)
+    $content = "**Feedback** from $who  |  Stratlab v$($APP.version)  |  install $inst`n" + ($text -replace '@', '@​')   # no pings
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    $body = @{ content = $content; allowed_mentions = @{ parse = @() } } | ConvertTo-Json -Compress -Depth 4
+    Invoke-WebRequest $hook -Method Post -ContentType 'application/json' -Body ([Text.Encoding]::UTF8.GetBytes($body)) -UseBasicParsing -Headers @{ 'User-Agent' = 'Stratlab' } -TimeoutSec 20 | Out-Null
+    @{ ok = $true }
+}
 function Open-Window([string]$u) {
     $edge = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
     if (-not (Test-Path $edge)) { $edge = "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe" }
@@ -590,7 +638,8 @@ while ($running) {
         switch -Regex ($path) {
             '^/$'            { Send-Bytes $ctx ([IO.File]::ReadAllBytes($html)) 'text/html; charset=utf-8' }
             '^/api/ping$'    { $lastPing = Get-Date; Send-Json $ctx @{ ok = $true } }
-            '^/api/version$' { Send-Json $ctx @{ version = [string]$APP.version; repo = [string]$APP.repo; catalog = [string]$APP.catalog; discord = [string]$APP.discord; votes = [bool]([string]$APP.votes) } }
+            '^/api/version$' { Send-Json $ctx @{ version = [string]$APP.version; repo = [string]$APP.repo; catalog = [string]$APP.catalog; discord = [string]$APP.discord; votes = [bool]([string]$APP.votes); feedback = [bool]([string]$APP.feedback) } }
+            '^/api/feedback$' { $req = Read-Body $ctx | ConvertFrom-Json; Send-Json $ctx (Send-Feedback $req) }   # { text, contact }
             # upvotes: GET what this install voted for; POST { kind: pack|strat, pack, source } toggles a vote
             '^/api/votes$' { $v = Read-Votes; Send-Json $ctx @{ voted = [string[]]@($v.voted.Keys) } }
             '^/api/vote$'  { $req = Read-Body $ctx | ConvertFrom-Json; Send-Json $ctx (Send-Vote $req) }
@@ -641,6 +690,7 @@ while ($running) {
             '^/api/import$'  { Send-Json $ctx (Import-Pack (Read-BodyBytes $ctx $PACK_MAX)) }
             '^/api/quit$'    { Send-Json $ctx @{ ok = $true }; $running = $false }
             '^/api/monitors$' { Send-Json $ctx (Get-Monitors) }
+            '^/api/settings$' { if ($ctx.Request.HttpMethod -eq 'POST') { $req = Read-Body $ctx | ConvertFrom-Json; Send-Json $ctx (Set-Settings $req) } else { Send-Json $ctx (Get-Settings) } }   # overlay size + corner
             '^/api/monitor$'  { $req = Read-Body $ctx | ConvertFrom-Json; Send-Json $ctx (Set-Monitor $req) }
             '^/api/overlay$' {   # GET: is the overlay running?  POST {toggle:true}: start it or stop it
                 # the overlay writes its process id to overlay.pid; checking that is instant (a WMI process

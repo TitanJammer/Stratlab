@@ -361,6 +361,7 @@
   .sites { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
   .sites .site { position: relative; height: 150px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: transform .22s var(--ease), background .2s, box-shadow .2s; animation: rise .4s var(--ease) both; }
   .sites .site b { font-size: 54px; font-weight: 700; line-height: 1; letter-spacing: -.02em; }
+  .sites .site.mid b { font-size: 38px; }   /* "Mid" is a word, not a letter */
   .sites .site span { font-size: 12px; color: var(--dim); }
   .sites .site:hover { transform: translateY(-2px); background: rgba(30,30,34,.8); }
   .sites .site.on span { color: rgba(255,255,255,.8); }
@@ -553,6 +554,24 @@
   #modal.show .box { transform: scale(1); }
   #modal .box p { margin: 0 0 18px; }
   #modal .row { display: flex; gap: 8px; justify-content: flex-end; }
+  /* feedback: the same kind of box, with a text area */
+  #fbModal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 30; backdrop-filter: blur(4px); }
+  #fbModal.show { opacity: 1; pointer-events: auto; } #fbModal:not(.show) * { pointer-events: none !important; }
+  #fbModal .box { background: var(--panel); padding: 22px 24px; border-radius: 14px; width: 460px; transform: scale(.96); transition: transform .2s var(--ease); }
+  #fbModal.show .box { transform: scale(1); }
+  #fbModal h3 { margin: 0 0 6px; font-size: 17px; } #fbModal .sub { margin: 0 0 14px; font-size: 12.5px; color: var(--dim); }
+  #fbModal textarea { width: 100%; box-sizing: border-box; min-height: 140px; resize: vertical; background: #131316; border: 1px solid var(--line); color: var(--text); border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 13.5px; line-height: 1.45; outline: none; }
+  #fbModal textarea:focus, #fbModal input:focus { border-color: #3a3a42; }
+  #fbModal input { width: 100%; box-sizing: border-box; margin-top: 8px; background: #131316; border: 1px solid var(--line); color: var(--text); border-radius: 9px; padding: 8px 12px; font: inherit; font-size: 13px; outline: none; }
+  #fbModal .row { display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 14px; } #fbModal .row .cnt { margin-right: auto; font-size: 11.5px; color: var(--key); }
+  /* the Discord button's menu: join, feedback, how to share a pack */
+  .dcWrap { position: relative; }
+  .dcPop { position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; min-width: 230px; padding: 6px; border-radius: 12px; background: #121214; box-shadow: 0 18px 44px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.08); opacity: 0; transform: translateY(-6px); pointer-events: none; transition: opacity .18s, transform .18s var(--ease); }
+  .dcPop.show { opacity: 1; transform: none; pointer-events: auto; }
+  .dcPop a, .dcPop button { display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box; text-align: left; padding: 9px 11px; border-radius: 8px; background: transparent; color: var(--text); font-size: 13px; text-decoration: none; }
+  .dcPop a:hover, .dcPop button:hover { background: #1c1c20; }
+  .dcPop svg { width: 16px; height: 16px; flex: none; color: var(--dim); }
+  .dcPop small { display: block; font-size: 11px; color: var(--dim); margin-top: 1px; }
   #modal .danger { background: #f2f2f2; color: #0b0b0b; font-weight: 600; }
   /* ---- one surface style everywhere, taken from the class picker: a gradient in a colour (--rc: the role's colour,
      or red for the brand) with blurred art (--art) laid in as texture only (luminosity blend) ---- */
@@ -802,6 +821,13 @@
   .monPop { position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; padding: 14px; border-radius: 14px; background: #121214; box-shadow: 0 18px 44px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.08);
     opacity: 0; transform: translateY(-4px); pointer-events: none; transition: opacity .18s, transform .22s var(--ease); }
   .monPop.show { opacity: 1; transform: none; pointer-events: auto; }
+  /* settings rows under the screen map: size slider, corner picker */
+  .setRow { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.07); }
+  .setRow .monHead b { float: right; font-weight: 600; color: var(--text); }
+  #sizeRange { width: 100%; margin: 8px 0 2px; }
+  .corners { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+  .corners button { padding: 7px 0; font-size: 15px; line-height: 1; background: #1c1c20; color: var(--dim); }
+  .corners button:hover { color: var(--text); } .corners button.on { background: rgba(255,70,85,.16); color: #fff; box-shadow: inset 0 0 0 1.5px rgba(255,70,85,.7); }
   .monHead { font-size: 10.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--key); margin-bottom: 10px; }
   .monMap { position: relative; margin: 0 auto; }
   .mon { position: absolute; border-radius: 6px; background: #1a1a1d; box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; transition: background .15s, box-shadow .15s; }
@@ -899,11 +925,20 @@
     <a id="updPill" class="updPill" target="_blank" rel="noopener" title="A newer Stratlab is out: opens the download page" style="display:none"></a>
     <button id="btnPacks" class="ghost iconBtn" title="Library: your packs (make, import, export, open one)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15zM9 7h7"/></svg><i class="cnt" id="packsCount"></i></button>
     <button id="btnBrowse" class="ghost iconBtn" title="Marketplace: community packs to install"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h2.5l2.2 11.2a2 2 0 0 0 2 1.6h8.7a2 2 0 0 0 2-1.5L21 7H6"/><circle cx="9.5" cy="20" r="1.3"/><circle cx="17.5" cy="20" r="1.3"/></svg></button>
-    <a id="btnDiscord" class="ghost iconBtn" href="#" target="_blank" rel="noopener" title="Stratlab Discord: share packs, get help"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.2.4a18 18 0 0 1 4.5 2.2 15.5 15.5 0 0 0-15.4 0A18 18 0 0 1 8.8 3.4L8.6 3a19.8 19.8 0 0 0-4.9 1.5C.6 9.1-.2 13.6.2 18.1a19.9 19.9 0 0 0 6 3l1.3-2.1a12.9 12.9 0 0 1-2-1l.5-.4a14.2 14.2 0 0 0 12 0l.5.4a12.9 12.9 0 0 1-2 1l1.3 2.1a19.9 19.9 0 0 0 6-3c.5-5.2-.9-9.7-3.5-13.7zM8.5 15.4c-1.2 0-2.1-1.1-2.1-2.4s.9-2.4 2.1-2.4 2.2 1.1 2.1 2.4c0 1.3-.9 2.4-2.1 2.4zm7 0c-1.2 0-2.1-1.1-2.1-2.4s.9-2.4 2.1-2.4 2.2 1.1 2.1 2.4c0 1.3-.9 2.4-2.1 2.4z"/></svg></a>
+    <div class="dcWrap"><div class="dcPop" id="dcPop">
+      <a id="dcJoin" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.2.4a18 18 0 0 1 4.5 2.2 15.5 15.5 0 0 0-15.4 0A18 18 0 0 1 8.8 3.4L8.6 3a19.8 19.8 0 0 0-4.9 1.5C.6 9.1-.2 13.6.2 18.1a19.9 19.9 0 0 0 6 3l1.3-2.1a12.9 12.9 0 0 1-2-1l.5-.4a14.2 14.2 0 0 0 12 0l.5.4a12.9 12.9 0 0 1-2 1l1.3 2.1a19.9 19.9 0 0 0 6-3c.5-5.2-.9-9.7-3.5-13.7zM8.5 15.4c-1.2 0-2.1-1.1-2.1-2.4s.9-2.4 2.1-2.4 2.2 1.1 2.1 2.4c0 1.3-.9 2.4-2.1 2.4zm7 0c-1.2 0-2.1-1.1-2.1-2.4s.9-2.4 2.1-2.4 2.2 1.1 2.1 2.4c0 1.3-.9 2.4-2.1 2.4z"/></svg><span>Join the Stratlab Discord<small>Packs, help, what's new</small></span></a>
+      <button id="dcFeedback"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span>Send feedback<small>Bugs, ideas, anything</small></span></button>
+      <button id="dcHow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg><span>How to share a pack<small>Export, then post it in #share-packs</small></span></button>
+    </div>
+    <a id="btnDiscord" class="ghost iconBtn" href="#" title="Stratlab Discord: join, send feedback, share packs"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.2.4a18 18 0 0 1 4.5 2.2 15.5 15.5 0 0 0-15.4 0A18 18 0 0 1 8.8 3.4L8.6 3a19.8 19.8 0 0 0-4.9 1.5C.6 9.1-.2 13.6.2 18.1a19.9 19.9 0 0 0 6 3l1.3-2.1a12.9 12.9 0 0 1-2-1l.5-.4a14.2 14.2 0 0 0 12 0l.5.4a12.9 12.9 0 0 1-2 1l1.3 2.1a19.9 19.9 0 0 0 6-3c.5-5.2-.9-9.7-3.5-13.7zM8.5 15.4c-1.2 0-2.1-1.1-2.1-2.4s.9-2.4 2.1-2.4 2.2 1.1 2.1 2.4c0 1.3-.9 2.4-2.1 2.4zm7 0c-1.2 0-2.1-1.1-2.1-2.4s.9-2.4 2.1-2.4 2.2 1.1 2.1 2.4c0 1.3-.9 2.4-2.1 2.4z"/></svg></a></div>
     <input type="file" id="packFile" accept=".stratlab,.lineuplab" hidden>
     <div class="monWrap">
-      <button id="btnMonitor" class="ghost iconBtn" title="Screen: which monitor the overlay shows on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M9 20h6M12 16v4"/></svg><i class="cnt" id="monLabel"></i></button>
-      <div class="monPop" id="monPop"><div class="monHead">Overlay shows on</div><div class="monMap" id="monMap"></div><div class="monHint">Click a screen. A running overlay moves right away.</div></div>
+      <button id="btnMonitor" class="ghost iconBtn" title="Settings: overlay screen, size and corner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><i class="cnt" id="monLabel"></i></button>
+      <div class="monPop" id="monPop">
+        <div class="monHead">Overlay shows on</div><div class="monMap" id="monMap"></div><div class="monHint">Click a screen. A running overlay moves right away.</div>
+        <div class="setRow"><div class="monHead">Overlay size <b id="sizeVal"></b></div><input type="range" id="sizeRange" min="280" max="900" step="4"><div class="monHint">Everything on the card scales with it. A running overlay restarts to apply it.</div></div>
+        <div class="setRow"><div class="monHead">Corner</div><div class="corners" id="corners"><button data-a="top-left" title="Top left">◤</button><button data-a="top-right" title="Top right">◥</button><button data-a="bottom-left" title="Bottom left">◣</button><button data-a="bottom-right" title="Bottom right">◢</button></div></div>
+      </div>
     </div>
     <span id="fsWarn" class="warnPill" style="display:none" title="Valorant is set to Fullscreen, so the game draws over the overlay. Click for how to fix it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Fullscreen</span>
     <button id="btnOverlay" title="Start or stop the in-game overlay">Overlay: off</button>
@@ -1039,6 +1074,13 @@
 </div></div>
 <div id="packDrop"><div>Drop the <b>.stratlab</b> pack to import it</div></div>
 <div id="modal"><div class="box"><p id="modalText"></p><div class="row"><button id="modalNo">Cancel</button><button class="danger" id="modalYes">Delete</button></div></div></div>
+<!-- feedback: goes to a private channel on the Stratlab Discord through a webhook -->
+<div id="fbModal"><div class="box">
+  <h3>Send feedback</h3><p class="sub">Bugs, ideas, anything. It lands in a private channel Titan Jammer reads, with the app version attached.</p>
+  <textarea id="fbText" maxlength="1500" placeholder="What happened, or what would make Stratlab better?"></textarea>
+  <input id="fbContact" maxlength="60" placeholder="Your Discord name, if you want a reply (optional)">
+  <div class="row"><span class="cnt" id="fbCount"></span><button id="fbNo">Cancel</button><button class="primary" id="fbYes">Send</button></div>
+</div></div>
 
 <script>
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
@@ -1150,9 +1192,55 @@ async function loadMonitors() {
     map.appendChild(d);
   });
 }
-$('#btnMonitor').onclick = e => { e.stopPropagation(); closePacksPage(); const p = $('#monPop'); const open = !p.classList.contains('show'); p.classList.toggle('show', open); if (open) loadMonitors(); };
+$('#btnMonitor').onclick = e => { e.stopPropagation(); closePacksPage(); $('#dcPop').classList.remove('show'); const p = $('#monPop'); const open = !p.classList.contains('show'); p.classList.toggle('show', open); if (open) { loadMonitors(); loadSettings(); } };
 $('#monPop').onclick = e => e.stopPropagation();
-document.addEventListener('click', () => $('#monPop').classList.remove('show'));
+document.addEventListener('click', () => { $('#monPop').classList.remove('show'); $('#dcPop').classList.remove('show'); });
+// overlay size and corner (config.json through the server). The slider saves when released; the number
+// shown is a percentage of the 372 px design size.
+let settings = null, sizeT;
+async function loadSettings() {
+  try { settings = await (await fetch('/api/settings')).json(); } catch (e) { return; }
+  const r = $('#sizeRange'); if (document.activeElement !== r) r.value = settings.width;
+  $('#sizeVal').textContent = Math.round(settings.width / 372 * 100) + '%';
+  $$('#corners button').forEach(b => b.classList.toggle('on', b.dataset.a === settings.anchor));
+}
+async function saveSettings(patch) {
+  try {
+    const r = await (await fetch('/api/settings', { method: 'POST', body: JSON.stringify(patch) })).json();
+    if (r.error) throw new Error(r.error);
+    settings = r; loadSettings();
+    if (patch.width != null) toast(r.restarted ? 'Overlay size saved. The overlay restarted with it.' : 'Overlay size saved.');
+    else toast('Overlay corner saved.');
+  } catch (e) { toast(e.message, true); }
+}
+$('#sizeRange').oninput = () => { $('#sizeVal').textContent = Math.round($('#sizeRange').value / 372 * 100) + '%'; };
+$('#sizeRange').onchange = () => { clearTimeout(sizeT); sizeT = setTimeout(() => saveSettings({ width: +$('#sizeRange').value }), 250); };
+$$('#corners button').forEach(b => b.onclick = e => { e.stopPropagation(); saveSettings({ anchor: b.dataset.a }); });
+loadSettings();
+// the Discord menu and the feedback box
+$('#btnDiscord').onclick = e => { e.preventDefault(); e.stopPropagation(); closePacksPage(); $('#monPop').classList.remove('show'); $('#dcPop').classList.toggle('show'); };
+$('#dcPop').onclick = e => e.stopPropagation();
+$('#dcJoin').addEventListener('click', () => $('#dcPop').classList.remove('show'));
+$('#dcHow').onclick = () => { $('#dcPop').classList.remove('show'); infoModal('To share a pack: open Library (the book), press Export strats, pick the strats, give the pack a name and a description, and save the .stratlab file. Then post that file in the #share-packs channel on the Stratlab Discord. The bot checks it and lists it in the Marketplace within about ten minutes. Post it again later to update it.'); };
+$('#dcFeedback').onclick = () => { $('#dcPop').classList.remove('show'); openFeedback(); };
+function openFeedback() {
+  $('#fbText').value = ''; $('#fbCount').textContent = ''; try { $('#fbContact').value = localStorage.getItem('fbContact') || ''; } catch (e) {}
+  $('#fbModal').classList.add('show'); setTimeout(() => $('#fbText').focus(), 50);
+}
+$('#fbText').oninput = () => { const n = $('#fbText').value.length; $('#fbCount').textContent = n > 1200 ? `${1500 - n} left` : ''; };
+$('#fbNo').onclick = () => $('#fbModal').classList.remove('show');
+$('#fbYes').onclick = async () => {
+  const text = $('#fbText').value.trim(), contact = $('#fbContact').value.trim();
+  if (text.length < 3) { toast('Write a little more first', true); return; }
+  $('#fbYes').disabled = true;
+  try {
+    const r = await (await fetch('/api/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, contact }) })).json();
+    if (r.error) throw new Error(r.error);
+    try { localStorage.setItem('fbContact', contact); } catch (e) {}
+    $('#fbModal').classList.remove('show'); toast('Sent. Thank you!');
+  } catch (e) { toast(/remote name|resolved|timed out|Failed to fetch|Unable to connect|network/i.test(e.message || '') ? "Couldn't send: check your internet connection" : e.message, true); }
+  $('#fbYes').disabled = false;
+};
 loadMonitors();
 // Start / stop. Starting always shows the notice (the display-mode line differs: a check mark when the game
 // is already in Windowed Fullscreen, a warning when it is not, the plain how-to when it cannot be read).
@@ -1237,7 +1325,16 @@ async function cardVote(card, L) {
 // home: one compact row per agent (portrait, name, a strip of map chips with counts). Clicking a map
 // chip unfolds that agent's lineups on that map as small cards grouped by site; only that section is
 // redrawn. A search or a map filter unfolds the matches on its own.
-let homeOpen = {};   // agent -> map currently unfolded
+let homeOpen = {};   // agent -> map currently unfolded (only one agent is open at a time)
+let homeByAgent = null;   // agent -> maps, as built by the last renderHome (for folding other agents without a full redraw)
+function closeOtherAgents(agent) {
+  Object.keys(homeOpen).forEach(other => {
+    if (other === agent || !homeOpen[other]) return;
+    homeOpen[other] = null;
+    const sec = document.querySelector(`.agentRow[data-agent="${CSS.escape(other)}"]`);
+    if (sec && homeByAgent && homeByAgent.get(other)) renderUnfold(sec, other, homeByAgent.get(other));
+  });
+}
 let homeType = {};   // agent -> strat type tab picked in the unfolded list (null = All)
 const ROLE_ORDER = ['Controller', 'Initiator', 'Sentinel', 'Duelist'];
 const ROLE_COLOR = { Controller: '#a594ff', Initiator: '#e8c15a', Sentinel: '#4fd1b8', Duelist: '#ff7a7a' };
@@ -1326,7 +1423,7 @@ function renderHome(force = false) {
   const narrowed = !!q || !!homePack;   // a search or a pack unfolds every match
   const home = $('#home'); home.innerHTML = '';
   home.classList.toggle('calm', same); homeDrawn = true;   // a filter or search change animates the new results in
-  const byAgent = new Map();
+  const byAgent = new Map(); homeByAgent = byAgent;
   rows.forEach(L => { if (!byAgent.has(L.agent)) byAgent.set(L.agent, new Map()); const m = byAgent.get(L.agent); if (!m.has(L.map)) m.set(L.map, []); m.get(L.map).push(L); });
   // agents grouped under their role (Controllers first), each group with its role icon and colour
   const roleOf = a => (state.agents.find(x => x.name === a) || {}).role || 'Other';
@@ -1348,13 +1445,13 @@ function renderHome(force = false) {
     if (maps.size > 1) {   // "All maps": everything this agent has, grouped by map then site
       const ch = document.createElement('div'); ch.className = 'mchip allc'; ch.dataset.map = '*';
       ch.innerHTML = `<span class="nm">All maps</span><span class="ct">${total}</span>`;
-      ch.onclick = () => { homeOpen[agent] = homeOpen[agent] === '*' ? null : '*'; renderUnfold(sec, agent, maps); };
+      ch.onclick = () => { closeOtherAgents(agent); homeOpen[agent] = homeOpen[agent] === '*' ? null : '*'; renderUnfold(sec, agent, maps); };
       chips.appendChild(ch);
     }
     [...maps.keys()].sort(mapOrder).forEach(map => {
       const ch = document.createElement('div'); ch.className = 'mchip'; ch.dataset.map = map; ch.style.backgroundImage = `url('${mapImg(map)}')`;
       ch.innerHTML = `<span class="nm"></span><span class="ct">${maps.get(map).length}</span>`; ch.querySelector('.nm').textContent = map;
-      ch.onclick = () => { homeOpen[agent] = homeOpen[agent] === map ? null : map; renderUnfold(sec, agent, maps); };
+      ch.onclick = () => { closeOtherAgents(agent); homeOpen[agent] = homeOpen[agent] === map ? null : map; renderUnfold(sec, agent, maps); };
       chips.appendChild(ch);
     });
     // what starts unfolded: everything that matched a search or filter, or what was open before
@@ -1651,11 +1748,13 @@ function renderSiteTiles() {
   const st = $('#siteTiles'); st.innerHTML = '';
   $('#stageBg').style.setProperty('--siteBg', wiz.map ? `url('${mapImg(wiz.map)}')` : 'none');
   const mapObj = state.maps.find(m => m.name === wiz.map);
-  const sites = (mapObj && mapObj.sites && mapObj.sites.length) ? mapObj.sites : ['A', 'B'];   // only Haven and Lotus have a C
+  const mapSites = (mapObj && mapObj.sites && mapObj.sites.length) ? mapObj.sites : ['A', 'B'];   // only Haven and Lotus have a C
+  // Mid is a place, not a plant site: anything that isn't a post-plant can live there (a mid smoke, a mid one-way)
+  const sites = wiz.type === 'post-plant' ? mapSites : [...mapSites, 'Mid'];
   if (wiz.site && !sites.includes(wiz.site)) wiz.site = null;
   sites.forEach((s, i) => {
     const have = state.lineups.filter(L => L.agent === wiz.agent && L.map === wiz.map && (L.site || '') === s && L.id !== wiz.id).length;
-    const t = document.createElement('div'); t.className = 'site rs' + (wiz.site === s ? ' on' : ''); t.style.animationDelay = (i * 60) + 'ms';
+    const t = document.createElement('div'); t.className = 'site rs' + (wiz.site === s ? ' on' : '') + (s === 'Mid' ? ' mid' : ''); t.style.animationDelay = (i * 60) + 'ms';
     t.innerHTML = `<b>${esc(s)}</b><span>${have ? `${have} strat${have === 1 ? '' : 's'} saved` : 'None yet'}</span>`;
     t.onclick = () => { wiz.site = s; markOnly(st, t); setTimeout(() => goStage('details'), 90); };
     st.appendChild(t);
@@ -1755,7 +1854,7 @@ function renderSteps() {
         <datalist id="stepNameList">${stepChoices().map(n => `<option value="${n}">`).join('')}</datalist>
       </div>
       <div class="edLeft">
-        <div class="drop"><img alt="" draggable="false" style="display:none"><span class="ph"><b>Drop, click or paste a picture</b><br>Win+Shift+S in game, then Ctrl+V</span><div class="focus" style="display:none"></div></div>
+        <div class="drop"><img alt="" draggable="false" style="display:none"><span class="ph"><b>Drop, click or paste a picture or clip</b><br>Win+Shift+S in game, then Ctrl+V · a video becomes a GIF</span><div class="focus" style="display:none"></div></div>
         <div class="thumbs"></div>
       </div>
       <!-- one bar with every control of the open picture: which picture, zoom mode, how long it shows, remove -->
@@ -1775,14 +1874,14 @@ function renderSteps() {
         </div>
       </div>
     </div>
-    <input type="file" accept="image/*" multiple hidden>`;
+    <input type="file" accept="image/*,video/*,.gif,.mp4,.webm,.mov,.mkv,.m4v" multiple hidden>`;
   const drop = box.querySelector('.drop'), file = box.querySelector('input[type=file]');
   let dragging = false;
   const aim = e => {
     const pic = curPic(); if (!pic) return;
     const img = drop.querySelector('img'); if (!img.naturalWidth) return;
     const r = fitted(img);
-    pic.x = clamp((e.clientX - r.left) / r.width); pic.y = clamp((e.clientY - r.top) / r.height); if (pic.mode === 'off') pic.mode = 'pulse';
+    pic.x = clamp((e.clientX - r.left) / r.width); pic.y = clamp((e.clientY - r.top) / r.height); if (pic.mode === 'off') pic.mode = isGif(pic) ? 'hold' : 'pulse';   // a clip only holds
     paintZoom();
   };
   drop.onpointerdown = e => {
@@ -1914,6 +2013,9 @@ function paintZoom() {
   const box = $('#steps'); if (!box || !box.querySelector('.stepEd')) return;
   const pic = curPic();
   const drop = box.querySelector('.drop'), img = drop.querySelector('img'), focus = drop.querySelector('.focus');
+  // a clip (GIF) has no pulse: the choice is None or Permanent
+  const clip = isGif(pic); box.querySelector('.seg button[data-v=pulse]').style.display = clip ? 'none' : '';
+  if (clip && pic.mode === 'pulse') pic.mode = 'hold';
   const mode = pic ? pic.mode : 'off', on = mode !== 'off';
   box.querySelectorAll('.seg button').forEach(b => b.classList.toggle('on', b.dataset.v === mode));
   // the red highlight slides to the picked zoom mode instead of jumping
@@ -1964,9 +2066,139 @@ function toPng(blob) {
     img.src = url;
   });
 }
+// ---------- video -> GIF, in the browser (no tools to install) ----------
+// A clip is sampled at GIF_FPS for at most GIF_MAX_S seconds, scaled to GIF_W wide, quantised to one
+// 256-colour palette (median cut over a sample of pixels) and written as a looping GIF89a with LZW.
+// The overlay plays GIFs as they are, so a clip behaves like a picture: hold zoom, time, notes. (No pulse:
+// a pulsing zoom over a moving clip is unreadable.) A .gif file is taken as it is.
+const GIF_FPS = 10, GIF_MAX_S = 8, GIF_W = 512, GIF_MAX_BYTES = 12 * 1048576;
+const isGif = p => !!p && (/^data:image\/gif/i.test(p.data || '') || /\.gif$/i.test(p.url || p.src || ''));
+class ByteSink {
+  constructor() { this.a = new Uint8Array(1 << 20); this.n = 0; }
+  grow(m) { if (this.n + m > this.a.length) { const b = new Uint8Array(Math.max(this.a.length * 2, this.n + m)); b.set(this.a); this.a = b; } }
+  byte(v) { this.grow(1); this.a[this.n++] = v & 255; }
+  bytes(arr) { this.grow(arr.length); this.a.set(arr, this.n); this.n += arr.length; }
+  u16(v) { this.byte(v); this.byte(v >> 8); }
+  str(s) { for (const ch of s) this.byte(ch.charCodeAt(0)); }
+  out() { return this.a.subarray(0, this.n); }
+}
+function medianCut(frames, n) {   // one palette for the whole clip, from a sample of its pixels
+  const px = []; const total = frames.reduce((s, f) => s + f.length / 4, 0); const step = Math.max(1, Math.floor(total / 60000));
+  for (const f of frames) for (let i = 0; i < f.length; i += 4 * step) px.push((f[i] << 16) | (f[i + 1] << 8) | f[i + 2]);
+  const range = b => { const mn = [255, 255, 255], mx = [0, 0, 0]; for (const p of b) { const c = [p >> 16 & 255, p >> 8 & 255, p & 255]; for (let i = 0; i < 3; i++) { if (c[i] < mn[i]) mn[i] = c[i]; if (c[i] > mx[i]) mx[i] = c[i]; } } let ch = 0, r = -1; for (let i = 0; i < 3; i++) if (mx[i] - mn[i] > r) { r = mx[i] - mn[i]; ch = i; } return { r, ch }; };
+  let boxes = [px];
+  while (boxes.length < n) {
+    let bi = -1, br = 0, bc = 0;
+    boxes.forEach((b, i) => { if (b.length < 2) return; const { r, ch } = range(b); if (r > br) { br = r; bi = i; bc = ch; } });
+    if (bi < 0) break;
+    const b = boxes[bi], sh = 16 - bc * 8; b.sort((p, q) => ((p >> sh) & 255) - ((q >> sh) & 255));
+    const mid = b.length >> 1; boxes.splice(bi, 1, b.slice(0, mid), b.slice(mid));
+  }
+  const pal = boxes.map(b => { let r = 0, g = 0, bl = 0; for (const p of b) { r += p >> 16 & 255; g += p >> 8 & 255; bl += p & 255; } const k = b.length || 1; return [Math.round(r / k), Math.round(g / k), Math.round(bl / k)]; });
+  while (pal.length < 256) pal.push([0, 0, 0]);
+  return pal;
+}
+function lzwEncode(pixels, minCodeSize, sink) {   // GIF-flavoured LZW, written out in 255-byte sub-blocks
+  const clear = 1 << minCodeSize, eoi = clear + 1, data = new ByteSink();
+  let codeSize = minCodeSize + 1, next = eoi + 1, dict = new Map(), bitBuf = 0, bitCnt = 0;
+  const emit = code => {
+    bitBuf |= code << bitCnt; bitCnt += codeSize;
+    while (bitCnt >= 8) { data.byte(bitBuf & 255); bitBuf >>>= 8; bitCnt -= 8; }
+    if (next > (1 << codeSize) - 1 && codeSize < 12) codeSize++;   // the decoder widens at the same point
+  };
+  emit(clear);
+  let prefix = pixels[0];
+  for (let i = 1; i < pixels.length; i++) {
+    const k = pixels[i], key = (prefix << 8) | k, hit = dict.get(key);
+    if (hit !== undefined) { prefix = hit; continue; }
+    emit(prefix);
+    if (next < 4096) dict.set(key, next++);
+    else { emit(clear); dict = new Map(); next = eoi + 1; codeSize = minCodeSize + 1; }
+    prefix = k;
+  }
+  emit(prefix); emit(eoi);
+  if (bitCnt > 0) data.byte(bitBuf & 255);
+  const all = data.out();
+  for (let i = 0; i < all.length; i += 255) { const len = Math.min(255, all.length - i); sink.byte(len); sink.bytes(all.subarray(i, i + len)); }
+  sink.byte(0);
+}
+function encodeGif(w, h, frames, pal, delayCs) {
+  const s = new ByteSink();
+  s.str('GIF89a'); s.u16(w); s.u16(h); s.byte(0xF7); s.byte(0); s.byte(0);            // one global 256-colour table
+  for (let i = 0; i < 256; i++) { const c = pal[i]; s.byte(c[0]); s.byte(c[1]); s.byte(c[2]); }
+  s.byte(0x21); s.byte(0xFF); s.byte(0x0B); s.str('NETSCAPE2.0'); s.byte(3); s.byte(1); s.u16(0); s.byte(0);   // loop forever
+  const cache = new Int16Array(32768).fill(-1);
+  const nearest = (r, g, b) => { let best = 0, bd = 1e9; for (let i = 0; i < 256; i++) { const c = pal[i], d = (c[0] - r) ** 2 + (c[1] - g) ** 2 + (c[2] - b) ** 2; if (d < bd) { bd = d; best = i; } } return best; };
+  for (const f of frames) {
+    const idx = new Uint8Array(w * h);
+    for (let i = 0, j = 0; i < f.length; i += 4, j++) {
+      const key = (f[i] >> 3) << 10 | (f[i + 1] >> 3) << 5 | (f[i + 2] >> 3);
+      let k = cache[key]; if (k < 0) { k = nearest(f[i], f[i + 1], f[i + 2]); cache[key] = k; }
+      idx[j] = k;
+    }
+    s.byte(0x21); s.byte(0xF9); s.byte(4); s.byte(0); s.u16(delayCs); s.byte(0); s.byte(0);   // graphic control: delay, no transparency
+    s.byte(0x2C); s.u16(0); s.u16(0); s.u16(w); s.u16(h); s.byte(0);                            // image descriptor
+    s.byte(8); lzwEncode(idx, 8, s);
+  }
+  s.byte(0x3B);
+  return s.out();
+}
+function bytesToDataUrl(bytes, mime) { let b = ''; for (let i = 0; i < bytes.length; i += 32768) b += String.fromCharCode.apply(null, bytes.subarray(i, i + 32768)); return `data:${mime};base64,` + btoa(b); }
+function seekTo(v, t) { return new Promise(res => { let done = false; const fin = () => { if (done) return; done = true; v.removeEventListener('seeked', fin); res(); }; v.addEventListener('seeked', fin); v.currentTime = t; setTimeout(fin, 1500); }); }
+async function videoToGif(file, onProgress) {
+  const url = URL.createObjectURL(file), v = document.createElement('video');
+  v.muted = true; v.playsInline = true; v.preload = 'auto'; v.style.cssText = 'position:fixed;left:-9999px;top:0;width:8px;height:8px;opacity:0;pointer-events:none';
+  document.body.appendChild(v);   // in the page and loaded explicitly: a detached element may never open the file
+  try {
+    v.src = url; v.load();
+    await new Promise((res, rej) => {
+      const ok = () => { if (v.readyState >= 2 && v.videoWidth) res(); };
+      ['loadedmetadata', 'loadeddata', 'canplay'].forEach(ev => v.addEventListener(ev, ok));
+      v.addEventListener('error', () => rej(new Error('Could not open the video (format not supported)')));
+      setTimeout(() => rej(new Error('The video took too long to open')), 20000);
+    });
+    const sc = Math.min(1, GIF_W / v.videoWidth), w = Math.max(2, Math.round(v.videoWidth * sc)), h = Math.max(2, Math.round(v.videoHeight * sc));
+    const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d', { willReadFrequently: true });
+    const frames = [], grab = () => { g.drawImage(v, 0, 0, w, h); frames.push(g.getImageData(0, 0, w, h).data); };
+    const known = isFinite(v.duration) && v.duration > 0;
+    if (known) {   // a normal file: step through it by seeking, frame-exact
+      const dur = Math.min(v.duration, GIF_MAX_S), n = Math.max(1, Math.floor(dur * GIF_FPS));
+      for (let i = 0; i < n; i++) { await seekTo(v, Math.min(i / GIF_FPS, Math.max(0, dur - 0.05))); grab(); if (onProgress) onProgress((i + 1) / n); }
+    } else {       // a recording without a length (screen recorders often write those): play it and grab as it goes
+      await v.play();
+      const t0 = performance.now(); let next = 0;
+      await new Promise(res => {
+        const tick = () => {
+          const t = (performance.now() - t0) / 1000;
+          if (v.ended || t >= GIF_MAX_S) return res();
+          if (t >= next / GIF_FPS) { grab(); next++; if (onProgress) onProgress(Math.min(1, t / GIF_MAX_S)); }
+          requestAnimationFrame(tick);
+        };
+        v.addEventListener('ended', () => res(), { once: true }); tick();
+      });
+      v.pause();
+      if (!frames.length) grab();
+    }
+    const bytes = encodeGif(w, h, frames, medianCut(frames, 256), Math.round(100 / GIF_FPS));
+    if (bytes.length > GIF_MAX_BYTES) throw new Error('The clip is too big as a GIF (try a shorter one)');
+    return bytesToDataUrl(bytes, 'image/gif');
+  } finally { try { v.pause(); } catch (e) {} v.removeAttribute('src'); v.remove(); URL.revokeObjectURL(url); }
+}
+const readDataUrl = f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(new Error('Could not read the file')); r.readAsDataURL(f); });
 async function addFiles(i, files) {
   let n = 0;
-  for (const f of files) { if (!f.type.startsWith('image/')) continue; try { const data = await toPng(f); wiz.steps[i].pics.push(newPic({ data, url: data }, i)); n++; } catch (e) { toast('Could not read ' + f.name, true); } }
+  for (const f of files) {
+    const isVideo = f.type.startsWith('video/') || /\.(mp4|webm|mov|mkv|m4v)$/i.test(f.name), gif = f.type === 'image/gif' || /\.gif$/i.test(f.name);
+    if (!isVideo && !gif && !f.type.startsWith('image/')) continue;
+    try {
+      let data;
+      if (isVideo) { toast(`Converting ${f.name} to a GIF…`); data = await videoToGif(f, k => toast(`Converting ${f.name}… ${Math.round(k * 100)}%`)); }
+      else if (gif) { if (f.size > GIF_MAX_BYTES) throw new Error('GIF is over 12 MB'); data = await readDataUrl(f); }
+      else data = await toPng(f);
+      wiz.steps[i].pics.push(newPic({ data, url: data, ...((isVideo || gif) ? { mode: 'off' } : {}) }, i)); n++;
+      if (isVideo) toast('Clip added as a GIF');
+    } catch (e) { toast(`${f.name}: ${e.message || 'could not read'}`, true); }
+  }
   if (n) { wiz.steps[i].ix = wiz.steps[i].pics.length - 1; activeStep = i; updateStep(i); }
 }
 document.addEventListener('paste', async e => {
@@ -2142,8 +2374,16 @@ function packTile(p, i) {
   const act = t.querySelector('.pact');
   const open = document.createElement('button'); open.className = 'primary'; open.textContent = 'Open'; open.title = 'Show only this pack on home'; open.onclick = e => { e.stopPropagation(); homePack = p.id; closePacksPage(); renderHome(); }; act.appendChild(open);
   packActions(p, act);
+  if (p.kind === 'imported') libraryVote(act, p);   // an imported pack that is in the marketplace can be upvoted from here too
   t.onclick = () => { homePack = p.id; closePacksPage(); renderHome(); };
   return t;
+}
+async function libraryVote(act, p) {
+  const c = await ensureCatalog(); if (!c) return;
+  const entry = (c.packs || []).find(x => x.id === p.id); if (!entry || !act.isConnected) return;
+  const { base, on } = shownCount('pack', p.id, null, entry.votes);
+  const v = document.createElement('button'); v.className = 'ghost vote'; v.title = on ? 'Remove your upvote' : 'Upvote this pack in the marketplace';
+  fillVote(v, base + (on ? 1 : 0), on); v.onclick = e => { e.stopPropagation(); castVote('pack', p.id, null, v, base); }; act.appendChild(v);
 }
 let pgTab = 'mine', catalog = null, catalogAt = 0, browseQ = '', browseRun = 0;
 function renderPacksPage() {
@@ -2321,7 +2561,7 @@ async function castVote(kind, pack, source, btn, baseCount) {
     const key = voteKey(kind, pack, source); if (r.voted) votedSet.add(key); else votedSet.delete(key);
     fillVote(btn, baseCount + (r.voted ? 1 : 0), r.voted);
     toast(r.voted ? 'Upvoted. Counts update within a few minutes.' : 'Vote removed.');
-  } catch (e) { toast(e.message, true); }
+  } catch (e) { toast(/remote name|resolved|timed out|Failed to fetch|Unable to connect|network/i.test(e.message || '') ? "Couldn't record the vote: check your internet connection" : e.message, true); }
   btn.disabled = false;
 }
 // the count the catalog knows, minus this install's own vote if it is in there (so a toggle shows right)
@@ -2546,6 +2786,8 @@ function toast(msg, bad) { const t = $('#toast'); t.textContent = msg; t.classNa
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (mkPop) { closeMkPop(); return; }
+    if ($('#fbModal').classList.contains('show')) { $('#fbModal').classList.remove('show'); return; }
+    if ($('#dcPop').classList.contains('show')) { $('#dcPop').classList.remove('show'); return; }
     if ($('#pkBuild').classList.contains('show')) { $('#pkBuild').classList.remove('show'); return; }
     if ($('#packModal').classList.contains('show')) { $('#packModal').classList.remove('show'); return; }
     if ($('#packsPage').classList.contains('open')) { closePacksPage(); return; }
@@ -2567,9 +2809,9 @@ async function checkVersion(force) {
     chip.querySelector('.v').textContent = v; chip.querySelector('.s').textContent = s ? ` · ${s}` : ''; chip.title = title;
   };
   chip.style.display = '';
-  const dc = $('#btnDiscord');   // the Discord button: the invite from version.json, or a note until one is set
-  if (appVersion.discord) { dc.href = appVersion.discord; dc.onclick = null; }
-  else { dc.removeAttribute('target'); dc.onclick = e => { e.preventDefault(); toast('No Discord invite is set up in this build yet'); }; }
+  // the Discord button opens a small menu: join (the invite from version.json), feedback, how to share
+  const join = $('#dcJoin'); if (appVersion.discord) join.href = appVersion.discord; else join.onclick = e => { e.preventDefault(); toast('No Discord invite is set up in this build yet'); };
+  $('#dcFeedback').style.display = appVersion.feedback ? '' : 'none';
   if (!appVersion.repo) { setChip(`v${ver}`, '', `Stratlab v${ver}`); return; }
   chip.onclick = () => checkVersion(true);
   setChip(`v${ver} · checking…`, 'can busy', 'Checking GitHub for a newer release');
