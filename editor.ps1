@@ -317,7 +317,7 @@ function Read-Pack([byte[]]$bytes) {
     if ($raw.Count -gt $PACK_MAX_STRATS) { throw "Pack has too many strats (over $PACK_MAX_STRATS)" }
     $clip = { param($v, [int]$len) $t = ([string]$v).Trim() -replace '[\x00-\x1f]', ''; if ($t.Length -gt $len) { $t.Substring(0, $len) } else { $t } }
     $num = { param($v, [double]$lo, [double]$hi, [double]$def) $d = 0.0; if ([double]::TryParse([string]$v, [Globalization.NumberStyles]::Float, [Globalization.CultureInfo]::InvariantCulture, [ref]$d)) { [Math]::Min($hi, [Math]::Max($lo, $d)) } else { $def } }
-    $zoomOf = { param($z) if ($null -eq $z -or $z -is [bool]) { $null } else { [ordered]@{ factor = (& $num $z.factor 1.5 10 5.4); x = [Math]::Round((& $num $z.x 0 1 0.5), 3); y = [Math]::Round((& $num $z.y 0 1 0.5), 3); mode = $(if ([string]$z.mode -eq 'hold') { 'hold' } else { 'pulse' }) } } }
+    $zoomOf = { param($z) if ($null -eq $z -or $z -is [bool]) { $null } else { [ordered]@{ factor = (& $num $z.factor 1.5 12 8); x = [Math]::Round((& $num $z.x 0 1 0.5), 3); y = [Math]::Round((& $num $z.y 0 1 0.5), 3); mode = $(if ([string]$z.mode -eq 'hold') { 'hold' } else { 'pulse' }) } } }
     $good = @(); $checked = @{}
     foreach ($s in $raw) {
         $agent = & $clip $s.agent 30; $map = & $clip $s.map 30
