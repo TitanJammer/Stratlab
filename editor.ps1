@@ -486,7 +486,12 @@ function Get-Catalog([bool]$force) {
         [pscustomobject]([ordered]@{
             id = $id; name = (Clip-Text $p.name 60); description = (Clip-Text $p.description 500); author = (Clip-Text $p.author 40); publisher = (Clip-Text $p.publisher 40)
             strats = [int]$p.strats; agents = [object[]]@($p.agents | ForEach-Object { Clip-Text $_ 30 }); maps = [object[]]@($p.maps | ForEach-Object { Clip-Text $_ 30 }); types = [object[]]@($p.types | ForEach-Object { Clip-Text $_ 20 })
-            size = [long]$p.size; sha256 = ([string]$p.sha256).ToLower(); stamp = (Clip-Text $p.stamp 30); published = (Clip-Text $p.published 30); updated = (Clip-Text $p.updated 30); file = [string]$p.file })
+            size = [long]$p.size; sha256 = ([string]$p.sha256).ToLower(); stamp = (Clip-Text $p.stamp 30); published = (Clip-Text $p.published 30); updated = (Clip-Text $p.updated 30); file = [string]$p.file
+            votes = $(if ("$($p.votes)" -match '^\d+$') { [int]$p.votes } else { 0 })
+            stratVotes = $(  # { "<strat source>": count } from the bot's tally
+                $sv = [ordered]@{}
+                if ($p.stratVotes) { foreach ($q in $p.stratVotes.PSObject.Properties) { $k = ([string]$q.Name) -replace '[^a-z0-9-]', ''; if ($k -and "$($q.Value)" -match '^\d+$') { $sv[$k] = [int]$q.Value } } }
+                [pscustomobject]$sv) })
     })
     $script:catCache = [ordered]@{ packs = $packs; updated = (Clip-Text $c.updated 30); fetched = (Get-Date).ToString('s') }; $script:catAt = Get-Date
     $catCache
