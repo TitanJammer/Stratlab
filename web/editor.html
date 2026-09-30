@@ -670,19 +670,26 @@
   .pgNote { max-width: 1760px; margin: 0 auto 24px; padding: 13px 18px; border-radius: 14px; background: #111113; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); font-size: 13px; color: var(--dim); display: flex; align-items: center; gap: 12px; animation: rise .4s var(--ease) both; }
   .pgNote b { color: var(--text); font-weight: 600; } .pgNote .sp { flex: 1; }
   .pgNote a { color: #a9bcff; text-decoration: none; font-weight: 600; white-space: nowrap; } .pgNote a:hover { text-decoration: underline; }
-  /* marketplace filters: one row per facet, chips; a facet's active chip is red, click again to clear */
-  .mkFilters { max-width: 1760px; margin: 0 auto 22px; display: flex; flex-direction: column; gap: 8px; animation: rise .4s var(--ease) both; }
-  .mkRow { display: flex; align-items: flex-start; gap: 12px; }
-  .mkLbl { flex: none; width: 58px; padding-top: 7px; font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--key); }
-  .mkChips { display: flex; flex-wrap: wrap; gap: 5px; }
-  .mkChip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: #131316; color: var(--dim); font-size: 12px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); transition: background .15s, color .15s, box-shadow .15s; }
-  .mkChip:hover { color: var(--text); background: #1a1a1e; }
-  .mkChip.on { background: rgba(255,70,85,.16); color: #fff; box-shadow: inset 0 0 0 1.5px rgba(255,70,85,.7); }
-  .mkChip i { width: 18px; height: 18px; border-radius: 6px; background: #000 center/cover; background-position: center 12%; margin-left: -4px; }
-  .mkChip.map i { width: 26px; height: 16px; border-radius: 4px; background-position: center; }
-  .mkChip b { font-weight: 500; }
-  .mkChip .n { font-size: 10.5px; color: rgba(255,255,255,.45); margin-left: 1px; } .mkChip.on .n { color: rgba(255,255,255,.7); }
-  .mkClear { margin-left: auto; background: transparent; color: var(--dim); font-size: 12px; padding: 5px 10px; } .mkClear:hover { color: var(--text); }
+  /* marketplace filters: one toolbar of dropdown pills (Agent, Map, Type, Show, Posted, Sort). A pill shows
+     its value, is red only while something is chosen, and opens a short list under it */
+  .mkBar { position: relative; z-index: 6; max-width: 1760px; margin: 0 auto 20px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; animation: rise .4s var(--ease) both; }   /* z-index: the rise animation's transform makes this a stacking context, and the tiles below would paint over an open list */
+  .mkSel { position: relative; }
+  .mkSel > button { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px 7px 13px; border-radius: 999px; background: #131316; color: var(--dim); font-size: 12.5px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); transition: background .15s, color .15s, box-shadow .15s; }
+  .mkSel > button:hover { color: var(--text); background: #1a1a1e; }
+  .mkSel > button.set { color: #fff; background: rgba(255,70,85,.14); box-shadow: inset 0 0 0 1.5px rgba(255,70,85,.65); }
+  .mkSel > button svg { width: 11px; height: 11px; opacity: .55; margin-left: 1px; }
+  .mkSel > button i { width: 18px; height: 18px; border-radius: 6px; background: #000 center/cover; background-position: center 12%; margin-left: -5px; }
+  .mkSel > button i.map { width: 26px; height: 16px; border-radius: 4px; background-position: center; }
+  .mkSel > button .k { color: rgba(255,255,255,.45); } .mkSel > button.set .k { color: rgba(255,255,255,.75); }
+  .mkPop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; min-width: 210px; max-height: 380px; overflow-y: auto; background: #151518; border-radius: 12px; padding: 6px; box-shadow: 0 16px 40px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.08); animation: rise .18s var(--ease) both; }
+  .mkPop::-webkit-scrollbar { width: 8px; } .mkPop::-webkit-scrollbar-thumb { background: #2a2a30; border-radius: 8px; }
+  .mkOpt { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; padding: 7px 10px; border-radius: 8px; background: transparent; color: var(--dim); font-size: 12.5px; }
+  .mkOpt:hover { background: #202024; color: var(--text); } .mkOpt.on { color: #fff; background: rgba(255,70,85,.14); }
+  .mkOpt i { flex: none; width: 22px; height: 22px; border-radius: 7px; background: #000 center/cover; background-position: center 12%; }
+  .mkOpt i.map { width: 34px; height: 20px; border-radius: 5px; background-position: center; }
+  .mkOpt .n { margin-left: auto; padding-left: 12px; font-size: 11px; color: rgba(255,255,255,.4); }
+  .mkSort { margin-left: auto; }
+  .mkClear { background: transparent; color: var(--dim); font-size: 12.5px; padding: 7px 10px; } .mkClear:hover { color: var(--text); }
   .ptile { position: relative; min-height: 230px; border-radius: 18px; overflow: hidden; background: #111113; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); cursor: pointer; display: flex; flex-direction: column; justify-content: flex-end;
     transition: transform .22s var(--ease), box-shadow .22s var(--ease); animation: rise .4s var(--ease) both; }
   .ptile:hover { transform: translateY(-3px); box-shadow: 0 18px 44px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.12); }
@@ -2158,36 +2165,48 @@ async function renderBrowse(force) {
 // the filter rows: agents and maps that occur in the catalog (with how many packs each), strat types,
 // installed state, how recent, and the sort order. One choice per row; clicking it again clears it.
 const mkt = { agent: null, map: null, type: null, show: 'all', days: 0, sort: 'newest' };
+let mkPop = null;
+function closeMkPop() { if (mkPop) { mkPop.remove(); mkPop = null; } }
+document.addEventListener('click', closeMkPop);
 function marketFilters(all) {
-  const box = document.createElement('div'); box.className = 'mkFilters';
+  const bar = document.createElement('div'); bar.className = 'mkBar';
   const count = key => { const c = {}; all.forEach(p => (p[key] || []).forEach(v => { c[v] = (c[v] || 0) + 1; })); return c; };
   const agentsC = count('agents'), mapsC = count('maps'), typesC = count('types');
-  const agentOrder = state.agents.map(a => a.name).filter(a => agentsC[a]), mapOrder = state.maps.map(m => m.name || m).filter(m => mapsC[m]);
-  const row = (label, chips) => {
-    const r = document.createElement('div'); r.className = 'mkRow';
-    r.innerHTML = `<span class="mkLbl"></span><div class="mkChips"></div>`; r.querySelector('.mkLbl').textContent = label;
-    const wrap = r.querySelector('.mkChips'); chips.forEach(c => wrap.appendChild(c)); return r;
+  const agents = state.agents.map(a => a.name).filter(a => agentsC[a]), maps = state.maps.map(m => m.name || m).filter(m => mapsC[m]), types = TYPES.map(t => t.key).filter(k => typesC[k]);
+  const chev = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="m3 4.5 3 3 3-3"/></svg>';
+  // one dropdown pill: opts[0] is the "any" choice; picking re-renders the tiles, the list closes on any click
+  const sel = (label, opts, get, set, cls) => {
+    const w = document.createElement('div'); w.className = 'mkSel' + (cls ? ' ' + cls : '');
+    const cur = opts.find(o => o.v === get()) || opts[0], isSet = cur !== opts[0];
+    const b = document.createElement('button'); b.className = isSet && cls !== 'mkSort' ? 'set' : '';   // sorting is never a "filter", so never red
+    if (isSet && cur.face) { const i = document.createElement('i'); setFace(i, cur.face); b.appendChild(i); }
+    if (isSet && cur.map) { const i = document.createElement('i'); i.className = 'map'; i.style.backgroundImage = `url('${mapImg(cur.map)}')`; b.appendChild(i); }
+    if (cls === 'mkSort') { const k = document.createElement('span'); k.className = 'k'; k.textContent = label + ':'; b.appendChild(k); }
+    b.appendChild(document.createTextNode(isSet || cls === 'mkSort' ? cur.text : label)); b.insertAdjacentHTML('beforeend', chev);
+    b.onclick = e => {
+      e.stopPropagation(); const open = mkPop && mkPop.parentNode === w; closeMkPop(); if (open) return;
+      const pop = document.createElement('div'); pop.className = 'mkPop'; pop.onclick = ev => ev.stopPropagation();
+      opts.forEach(o => {
+        const it = document.createElement('button'); it.className = 'mkOpt' + (o === cur ? ' on' : '');
+        if (o.face) { const i = document.createElement('i'); setFace(i, o.face); it.appendChild(i); }
+        if (o.map) { const i = document.createElement('i'); i.className = 'map'; i.style.backgroundImage = `url('${mapImg(o.map)}')`; it.appendChild(i); }
+        it.appendChild(document.createTextNode(o.text));
+        if (o.n) { const n = document.createElement('span'); n.className = 'n'; n.textContent = o.n; it.appendChild(n); }
+        it.onclick = () => { closeMkPop(); set(o.v); renderBrowse(false); }; pop.appendChild(it);
+      });
+      w.appendChild(pop); mkPop = pop;
+    };
+    w.appendChild(b); return w;
   };
-  const chip = (text, on, fn, extra) => {
-    const b = document.createElement('button'); b.className = 'mkChip' + (on ? ' on' : '') + (extra && extra.cls ? ' ' + extra.cls : '');
-    if (extra && extra.face) { const i = document.createElement('i'); setFace(i, extra.face); b.appendChild(i); }
-    if (extra && extra.map) { const i = document.createElement('i'); i.style.backgroundImage = `url('${mapImg(extra.map)}')`; b.appendChild(i); }
-    const s = document.createElement('b'); s.textContent = text; b.appendChild(s);
-    if (extra && extra.n) { const n = document.createElement('span'); n.className = 'n'; n.textContent = extra.n; b.appendChild(n); }
-    b.onclick = () => { fn(); renderBrowse(false); }; return b;
-  };
-  const pick = (key, v) => () => { mkt[key] = mkt[key] === v ? null : v; };
-  if (agentOrder.length) box.appendChild(row('Agent', agentOrder.map(a => chip(a, mkt.agent === a, pick('agent', a), { face: a, n: agentsC[a] }))));
-  if (mapOrder.length) box.appendChild(row('Map', mapOrder.map(m => chip(m, mkt.map === m, pick('map', m), { map: m, cls: 'map', n: mapsC[m] }))));
-  const typeOrder = TYPES.map(t => t.key).filter(k => typesC[k]);
-  if (typeOrder.length) box.appendChild(row('Type', typeOrder.map(k => chip(typeLabel(k), mkt.type === k, pick('type', k), { n: typesC[k] }))));
-  box.appendChild(row('Show', [['all', 'All'], ['new', 'Not installed'], ['have', 'Installed'], ['upd', 'Updates']].map(([k, l]) => chip(l, mkt.show === k, () => { mkt.show = k; }))));
-  box.appendChild(row('Posted', [[0, 'Any time'], [7, 'This week'], [30, 'This month'], [90, 'Last 3 months']].map(([d, l]) => chip(l, mkt.days === d, () => { mkt.days = d; }))));
-  const sortRow = row('Sort', [['newest', 'Newest'], ['updated', 'Recently updated'], ['strats', 'Most strats'], ['name', 'Name']].map(([k, l]) => chip(l, mkt.sort === k, () => { mkt.sort = k; })));
-  const active = mkt.agent || mkt.map || mkt.type || mkt.show !== 'all' || mkt.days || mkt.sort !== 'newest' || browseQ.trim();
-  if (active) { const c = document.createElement('button'); c.className = 'mkClear'; c.textContent = 'Clear filters'; c.onclick = () => { Object.assign(mkt, { agent: null, map: null, type: null, show: 'all', days: 0, sort: 'newest' }); browseQ = ''; $('#pgSearch').value = ''; renderBrowse(false); }; sortRow.appendChild(c); }
-  box.appendChild(sortRow);
-  return box;
+  bar.appendChild(sel('Agent', [{ v: null, text: 'Any agent' }, ...agents.map(a => ({ v: a, text: a, face: a, n: agentsC[a] }))], () => mkt.agent, v => { mkt.agent = v; }));
+  bar.appendChild(sel('Map', [{ v: null, text: 'Any map' }, ...maps.map(m => ({ v: m, text: m, map: m, n: mapsC[m] }))], () => mkt.map, v => { mkt.map = v; }));
+  bar.appendChild(sel('Type', [{ v: null, text: 'Any type' }, ...types.map(k => ({ v: k, text: typeLabel(k), n: typesC[k] }))], () => mkt.type, v => { mkt.type = v; }));
+  bar.appendChild(sel('Show', [{ v: 'all', text: 'Everything' }, { v: 'new', text: 'Not installed' }, { v: 'have', text: 'Installed' }, { v: 'upd', text: 'Updates available' }], () => mkt.show, v => { mkt.show = v; }));
+  bar.appendChild(sel('Posted', [{ v: 0, text: 'Any time' }, { v: 7, text: 'This week' }, { v: 30, text: 'This month' }, { v: 90, text: 'Last 3 months' }], () => mkt.days, v => { mkt.days = v; }));
+  const active = mkt.agent || mkt.map || mkt.type || mkt.show !== 'all' || mkt.days || browseQ.trim();
+  if (active) { const c = document.createElement('button'); c.className = 'mkClear'; c.textContent = 'Clear'; c.onclick = () => { Object.assign(mkt, { agent: null, map: null, type: null, show: 'all', days: 0 }); browseQ = ''; $('#pgSearch').value = ''; renderBrowse(false); }; bar.appendChild(c); }
+  bar.appendChild(sel('Sort', [{ v: 'newest', text: 'Newest' }, { v: 'updated', text: 'Recently updated' }, { v: 'strats', text: 'Most strats' }, { v: 'name', text: 'Name' }], () => mkt.sort, v => { mkt.sort = v; }, 'mkSort'));
+  return bar;
 }
 function catalogStatus(p) {
   const local = (state.packs || []).find(x => x.id === p.id);
@@ -2208,9 +2227,10 @@ function catalogTile(p, i) {
     <span class="kind">${{ new: 'Community', have: 'Installed', upd: 'Update available', own: 'Your pack' }[status]}</span><div class="faces"></div>
     <div class="txt"><h3></h3><div class="pm"></div><p></p><div class="mapsRow"></div><div class="pact"></div></div>`;
   t.querySelector('h3').textContent = p.name;
-  const when = p.updated ? new Date(p.updated).toLocaleDateString() : '', mb = p.size ? (p.size / 1048576).toFixed(1) + ' MB' : '';
+  // dates: when it was first posted, and when it was last updated if that is a different day
+  const day = s => s ? new Date(s).toLocaleDateString() : '', posted = day(p.published), updated = day(p.updated), mb = p.size ? (p.size / 1048576).toFixed(1) + ' MB' : '';
   const types = (p.types || []).map(typeLabel).join(', ');
-  t.querySelector('.pm').textContent = [`${p.strats} strat${p.strats === 1 ? '' : 's'}`, types, p.author ? `by ${p.author}` : '', p.publisher && p.publisher !== p.author ? `posted by ${p.publisher}` : '', mb, when ? `updated ${when}` : ''].filter(Boolean).join(' · ');
+  t.querySelector('.pm').textContent = [`${p.strats} strat${p.strats === 1 ? '' : 's'}`, types, p.author ? `by ${p.author}` : '', p.publisher && p.publisher !== p.author ? `posted by ${p.publisher}` : '', mb, posted ? `posted ${posted}` : '', updated && updated !== posted ? `updated ${updated}` : ''].filter(Boolean).join(' · ');
   const d = t.querySelector('p'); if (p.description) d.textContent = p.description; else d.remove();
   const faces = t.querySelector('.faces');
   agents.slice(0, 4).forEach(a => { const f = document.createElement('i'); f.title = a; setFace(f, a); faces.appendChild(f); });
@@ -2436,6 +2456,7 @@ let toastT;
 function toast(msg, bad) { const t = $('#toast'); t.textContent = msg; t.className = 'show' + (bad ? ' bad' : ''); clearTimeout(toastT); toastT = setTimeout(() => t.className = '', 2600); }
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
+    if (mkPop) { closeMkPop(); return; }
     if ($('#pkBuild').classList.contains('show')) { $('#pkBuild').classList.remove('show'); return; }
     if ($('#packModal').classList.contains('show')) { $('#packModal').classList.remove('show'); return; }
     if ($('#packsPage').classList.contains('open')) { closePacksPage(); return; }
