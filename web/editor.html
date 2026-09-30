@@ -86,7 +86,10 @@
   #app > header { position: relative; }
   #app > header::after { content: ""; position: absolute; left: 24px; right: 24px; bottom: 0; height: 1px; background: linear-gradient(90deg, rgba(255,70,85,.55), rgba(255,255,255,.07) 35%, transparent); }
   header h1 { font-size: 18px; margin: 0 8px 0 0; letter-spacing: .3px; }
-  .search { flex: 1; max-width: 420px; position: relative; }
+  .search { flex: 1 1 340px; min-width: 240px; max-width: 420px; position: relative; }   /* keeps its width before the spacer takes any */
+  #app > header > * { flex-shrink: 0; } #app > header > .search { flex-shrink: 1; }
+  @media (max-width: 1560px) { #verChip .s { display: none; } }                                  /* narrower: the chip keeps its dot and version */
+  @media (max-width: 1280px) { #btnPacks span, #btnBrowse span, #btnMonitor span { display: none; } #btnPacks, #btnBrowse, #btnMonitor { padding-left: 10px; padding-right: 10px; } }
   .search input { padding-left: 34px; }
   .search svg { position: absolute; left: 11px; top: 10px; width: 16px; height: 16px; opacity: .5; pointer-events: none; }
   /* scrollbar-gutter: the scrollbar's space is always reserved, so content never jumps sideways when
@@ -617,8 +620,8 @@
   .pdesc { font-size: 13px; color: var(--dim); white-space: pre-wrap; margin-top: -4px; }
   .pdesc:empty { display: none; }
   /* the Packs button (header) and its panel; the packHead on home only shows while a pack is picked */
-  #btnPacks { display: flex; align-items: center; gap: 7px; }
-  #btnPacks svg { width: 16px; height: 16px; }
+  #btnPacks, #btnBrowse { display: flex; align-items: center; gap: 7px; }
+  #btnPacks svg, #btnBrowse svg { width: 16px; height: 16px; }
   #btnPacks.on { color: #fff; background: rgba(255,70,85,.16); box-shadow: inset 0 0 0 1.5px rgba(255,70,85,.7); }
   .packsPop { width: min(440px, calc(100vw - 32px)); padding: 12px; }
   .ppHead { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
@@ -650,6 +653,17 @@
   .pgSec { max-width: 1760px; margin: 0 auto 30px; }
   .pgSec .mapGroup { margin-bottom: 14px; }
   .pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
+  /* Your library | Browse */
+  .pgTabs { display: flex; gap: 2px; margin-left: 14px; background: #131316; border-radius: 10px; padding: 3px; }
+  .pgTabs button { background: transparent; color: var(--dim); padding: 6px 14px; border-radius: 8px; font-size: 13px; }
+  .pgTabs button:hover { color: var(--text); } .pgTabs button.on { background: #26262b; color: var(--text); }
+  #pgMineBtns, #pgBrowseBtns { display: flex; gap: 8px; align-items: center; }
+  #pgSearch { width: 250px; background: #131316; border: 1px solid var(--line); color: var(--text); border-radius: 9px; padding: 8px 12px; font: inherit; font-size: 13px; outline: none; }
+  #pgSearch:focus { border-color: #3a3a42; }
+  .ptile.community .kind { color: #ffd28a; } .ptile.have .kind { color: #8fe3a5; } .ptile.upd .kind { color: #a9bcff; }
+  .pgNote { max-width: 1760px; margin: 0 auto 24px; padding: 13px 18px; border-radius: 14px; background: #111113; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); font-size: 13px; color: var(--dim); display: flex; align-items: center; gap: 12px; animation: rise .4s var(--ease) both; }
+  .pgNote b { color: var(--text); font-weight: 600; } .pgNote .sp { flex: 1; }
+  .pgNote a { color: #a9bcff; text-decoration: none; font-weight: 600; white-space: nowrap; } .pgNote a:hover { text-decoration: underline; }
   .ptile { position: relative; min-height: 230px; border-radius: 18px; overflow: hidden; background: #111113; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); cursor: pointer; display: flex; flex-direction: column; justify-content: flex-end;
     transition: transform .22s var(--ease), box-shadow .22s var(--ease); animation: rise .4s var(--ease) both; }
   .ptile:hover { transform: translateY(-3px); box-shadow: 0 18px 44px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.12); }
@@ -678,7 +692,15 @@
   .pgEmpty h3 { margin: 0 0 8px; font-size: 22px; } .pgEmpty p { color: var(--dim); font-size: 14px; line-height: 1.5; }
   .pgEmpty .row { display: flex; gap: 8px; justify-content: center; margin-top: 18px; }
   #packs { margin: -6px 0 18px; }
-  #foot { text-align: center; color: var(--key); font-size: 11.5px; padding: 34px 0 6px; }
+  /* the version, in the header so it never scrolls away; a click checks for updates */
+  #verChip { display: inline-flex; align-items: center; background: transparent; color: var(--key); font-size: 11.5px; font-weight: 500; padding: 6px 9px; border-radius: 8px; letter-spacing: .02em; cursor: default; white-space: nowrap; }
+  #verChip i { width: 6px; height: 6px; margin-right: 7px; border-radius: 50%; background: #45454d; transition: background .3s, box-shadow .3s; }
+  #verChip.ok i { background: #5fd08a; box-shadow: 0 0 7px rgba(95,208,138,.55); }   /* checked on open: up to date */
+  #verChip.new i { background: var(--accent); box-shadow: 0 0 7px rgba(255,70,85,.6); }
+  #verChip.bad i { background: #6a6a72; }
+  #verChip.can { cursor: pointer; } #verChip.can:hover { color: var(--dim); background: #131316; }
+  #verChip.busy i { animation: pulseDim 1s ease-in-out infinite; }
+  @keyframes pulseDim { 50% { opacity: .4; } }
   .updPill { height: 34px; padding: 0 12px; border-radius: 999px; display: flex; align-items: center; font-size: 12.5px; font-weight: 600; color: #fff; text-decoration: none; background: rgba(95,201,107,.16); box-shadow: inset 0 0 0 1px rgba(95,201,107,.5); }
   .updPill:hover { background: rgba(95,201,107,.28); }
   .packHead { display: flex; gap: 16px; align-items: flex-start; padding: 14px 16px; border-radius: 14px; background: #111113; box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); animation: rise .3s var(--ease) both; }
@@ -838,8 +860,10 @@
       <input id="q" type="text" placeholder="Search agent, map, site, type, molly, flash...">
     </div>
     <span style="flex:1"></span>
+    <button id="verChip" title="Stratlab version" style="display:none"></button>
     <a id="updPill" class="updPill" target="_blank" rel="noopener" title="A newer Stratlab is out: opens the download page" style="display:none"></a>
-    <button id="btnPacks" class="ghost" title="Your packs: make, import, export, open one"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-4 9 4-9 4-9-4zM3 8v8l9 4 9-4V8M12 12v8"/></svg><span id="packsLabel">Packs</span></button>
+    <button id="btnPacks" class="ghost" title="Your library of packs: make, import, export, open one"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15zM9 7h7"/></svg><span id="packsLabel">Library</span></button>
+    <button id="btnBrowse" class="ghost" title="Community packs: browse and install"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h2.5l2.2 11.2a2 2 0 0 0 2 1.6h8.7a2 2 0 0 0 2-1.5L21 7H6"/><circle cx="9.5" cy="20" r="1.3"/><circle cx="17.5" cy="20" r="1.3"/></svg><span>Browse</span></button>
     <input type="file" id="packFile" accept=".stratlab,.lineuplab" hidden>
     <div class="monWrap">
       <button id="btnMonitor" class="ghost" title="Which screen the overlay shows on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M9 20h6M12 16v4"/></svg><span id="monLabel">Screen</span></button>
@@ -848,7 +872,7 @@
     <button id="btnOverlay" title="Start or stop the in-game overlay">Overlay: off</button>
     <button class="primary" id="btnNew">+ New strat</button>
   </header>
-  <main><div id="welcome" class="rs"></div><div id="packs"></div><div id="home"></div><div id="foot"></div></main>
+  <main><div id="welcome" class="rs"></div><div id="packs"></div><div id="home"></div></main>
 </div>
 
 <div id="wiz">
@@ -951,7 +975,10 @@
 </div></div>
 <!-- the Packs screen: every pack as a tile on its main map, with the agents' portraits -->
 <section id="packsPage">
-  <header><button class="ghost" id="pgBack">‹ Back</button><h2>Packs</h2><span class="sp"></span><button id="pgImport" title="Import a .stratlab pack (or drop one on the home page)">Import</button><button class="primary" id="pgNew" title="Pick strats, name the pack, save the .stratlab file">Export strats</button></header>
+  <header><button class="ghost" id="pgBack">‹ Back</button><h2>Packs</h2>
+    <div class="pgTabs"><button class="on" data-tab="mine">Your library</button><button data-tab="browse">Browse</button></div><span class="sp"></span>
+    <span id="pgMineBtns"><button id="pgImport" title="Import a .stratlab pack (or drop one on the home page)">Import</button><button class="primary" id="pgNew" title="Pick strats, name the pack, save the .stratlab file">Export strats</button></span>
+    <span id="pgBrowseBtns" style="display:none"><input id="pgSearch" placeholder="Search packs, agents, maps" spellcheck="false"><button id="pgRefresh" title="Fetch the catalog again">Refresh</button></span></header>
   <div class="pgBody" id="pgBody"></div>
 </section>
 <!-- pack builder: pick strats (grouped by agent and map), name and describe the pack, keep it, export it -->
@@ -2041,7 +2068,11 @@ function packTile(p, i) {
   t.onclick = () => { homePack = p.id; closePacksPage(); renderHome(); };
   return t;
 }
+let pgTab = 'mine', catalog = null, catalogAt = 0, browseQ = '', browseRun = 0;
 function renderPacksPage() {
+  $$('.pgTabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === pgTab));
+  $('#pgMineBtns').style.display = pgTab === 'mine' ? '' : 'none'; $('#pgBrowseBtns').style.display = pgTab === 'browse' ? '' : 'none';
+  if (pgTab === 'browse') { renderBrowse(false); return; }
   const body = $('#pgBody'); body.innerHTML = ''; usedBanners.clear();
   const packs = state.packs || [];
   if (!packs.length) {
@@ -2057,9 +2088,92 @@ function renderPacksPage() {
     body.appendChild(sec);
   });
 }
-function openPacksPage() { renderPacksPage(); $('#packsPage').classList.add('open'); }
+// Browse: the community catalog (catalog.json of the packs repository, read by the server). Each entry is
+// a tile like the library's; Install downloads the pack through the server (checksum checked) and opens
+// the usual import preview. A pack that is already here shows Installed, or Update when the catalog's copy
+// was exported later than the one imported.
+async function renderBrowse(force) {
+  const body = $('#pgBody'), run = ++browseRun;
+  if (!appVersion || !appVersion.catalog) { body.innerHTML = `<div class="pgEmpty"><h3>No catalog</h3><p>This build has no community catalog set up.</p></div>`; return; }
+  if (force || !catalog || Date.now() - catalogAt > 600000) {
+    body.innerHTML = `<div class="pgEmpty"><h3>Loading packs…</h3></div>`;
+    try {
+      const r = await (await fetch('/api/catalog' + (force ? '?force=1' : ''))).json();
+      if (r.error) throw new Error(r.error);
+      catalog = r; catalogAt = Date.now();
+    } catch (e) {
+      if (run !== browseRun || pgTab !== 'browse') return;
+      body.innerHTML = `<div class="pgEmpty"><h3>Couldn't load the catalog</h3><p></p><div class="row"><button class="primary" id="pgRetry">Try again</button></div></div>`;
+      body.querySelector('p').textContent = e.message; $('#pgRetry').onclick = () => renderBrowse(true);
+      return;
+    }
+    if (run !== browseRun || pgTab !== 'browse') return;
+  }
+  body.innerHTML = ''; usedBanners.clear();
+  const q = browseQ.trim().toLowerCase();
+  const all = catalog.packs || [];
+  const packs = all.filter(p => !q || [p.name, p.description, p.author, p.publisher, ...(p.agents || []), ...(p.maps || []), ...(p.types || []).map(typeLabel)].join(' ').toLowerCase().includes(q));
+  body.appendChild(browseNote());
+  if (!packs.length) {
+    const d = document.createElement('div'); d.className = 'pgEmpty';
+    d.innerHTML = all.length ? `<h3>No packs match</h3><p>Try another name, agent or map.</p>` : `<h3>No packs published yet</h3><p>Be the first: export a pack and post the .stratlab file in the Discord channel.</p>`;
+    body.appendChild(d); return;
+  }
+  const sec = document.createElement('section'); sec.className = 'pgSec';
+  sec.innerHTML = `<div class="mapGroup"></div><div class="pgrid"></div>`; sec.querySelector('.mapGroup').textContent = `Community packs · ${packs.length}`;
+  const grid = sec.querySelector('.pgrid'); packs.forEach((p, i) => grid.appendChild(catalogTile(p, i)));
+  body.appendChild(sec);
+}
+function browseNote() {
+  const n = document.createElement('div'); n.className = 'pgNote';
+  n.innerHTML = `<span><b>Share yours:</b> export a pack, then post the .stratlab file in the Stratlab Discord's <b>#share-packs</b> channel. It's listed here within minutes; post it again to update it.</span><span class="sp"></span>`;
+  if (appVersion && appVersion.discord) { const a = document.createElement('a'); a.href = appVersion.discord; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Join the Discord ›'; n.appendChild(a); }
+  return n;
+}
+function catalogTile(p, i) {
+  const local = (state.packs || []).find(x => x.id === p.id);
+  const status = !local ? 'new' : local.kind === 'own' ? 'own' : (p.stamp && local.stamp && p.stamp !== local.stamp ? 'upd' : 'have');
+  const agents = p.agents || [], maps = p.maps || [], banner = pickBanner(p, maps);
+  const t = document.createElement('div'); t.className = 'ptile community' + (status === 'upd' ? ' upd' : status === 'new' ? '' : ' have'); t.style.animationDelay = (i * 40) + 'ms';
+  t.innerHTML = `<div class="bg" style="background-image:url('${banner ? mapImg(banner) : ''}')"></div><div class="shade"></div>
+    <span class="kind">${{ new: 'Community', have: 'Installed', upd: 'Update available', own: 'Your pack' }[status]}</span><div class="faces"></div>
+    <div class="txt"><h3></h3><div class="pm"></div><p></p><div class="mapsRow"></div><div class="pact"></div></div>`;
+  t.querySelector('h3').textContent = p.name;
+  const when = p.updated ? new Date(p.updated).toLocaleDateString() : '', mb = p.size ? (p.size / 1048576).toFixed(1) + ' MB' : '';
+  const types = (p.types || []).map(typeLabel).join(', ');
+  t.querySelector('.pm').textContent = [`${p.strats} strat${p.strats === 1 ? '' : 's'}`, types, p.author ? `by ${p.author}` : '', p.publisher && p.publisher !== p.author ? `posted by ${p.publisher}` : '', mb, when ? `updated ${when}` : ''].filter(Boolean).join(' · ');
+  const d = t.querySelector('p'); if (p.description) d.textContent = p.description; else d.remove();
+  const faces = t.querySelector('.faces');
+  agents.slice(0, 4).forEach(a => { const f = document.createElement('i'); f.title = a; setFace(f, a); faces.appendChild(f); });
+  if (agents.length > 4) { const m = document.createElement('i'); m.className = 'more'; m.textContent = '+' + (agents.length - 4); faces.appendChild(m); }
+  const mr = t.querySelector('.mapsRow');
+  maps.slice(0, 6).forEach(m => { const c = document.createElement('span'); c.style.backgroundImage = `url('${mapImg(m)}')`; c.title = m; c.innerHTML = '<b></b>'; c.querySelector('b').textContent = m; mr.appendChild(c); });
+  if (maps.length > 6) { const c = document.createElement('span'); c.className = 'more'; c.textContent = '+' + (maps.length - 6); mr.appendChild(c); }
+  const act = t.querySelector('.pact');
+  const btn = (label, cls, fn, title) => { const b = document.createElement('button'); b.className = cls; b.textContent = label; if (title) b.title = title; b.onclick = e => { e.stopPropagation(); fn(); }; act.appendChild(b); return b; };
+  const open = () => { homePack = p.id; closePacksPage(); renderHome(); };
+  let main;
+  if (status === 'new') main = btn('Install', 'primary', () => installFromCatalog(p), 'Download the pack and preview what is inside');
+  else if (status === 'upd') { main = btn('Update', 'primary', () => installFromCatalog(p), 'Get the newer version; your copy of its strats is replaced'); btn('Open', '', open, 'Show only this pack on home'); }
+  else { main = btn('Open', 'primary', open, 'Show only this pack on home'); if (status === 'have') btn('Reinstall', 'ghost', () => installFromCatalog(p)); }
+  t.onclick = () => main.click();
+  return t;
+}
+async function installFromCatalog(p) {
+  toast(`Downloading "${p.name}"…`);
+  let r;
+  try { r = await (await fetch('/api/catalog/fetch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: p.id }) })).json(); }
+  catch (e) { toast('Download failed', true); return; }
+  if (r.error) { toast(r.error, true); return; }
+  showPackPreview(r, () => fetch('/api/import/confirm', { method: 'POST' }), () => fetch('/api/import/discard', { method: 'POST' }));
+}
+$$('.pgTabs button').forEach(b => b.onclick = () => { if (pgTab === b.dataset.tab) return; pgTab = b.dataset.tab; renderPacksPage(); });
+let browseT; $('#pgSearch').oninput = () => { browseQ = $('#pgSearch').value; clearTimeout(browseT); browseT = setTimeout(() => renderBrowse(false), 120); };
+$('#pgRefresh').onclick = () => renderBrowse(true);
+function openPacksPage(tab) { if (tab) pgTab = tab; renderPacksPage(); $('#packsPage').classList.add('open'); }
 function closePacksPage() { $('#packsPage').classList.remove('open'); }
-$('#btnPacks').onclick = openPacksPage;
+$('#btnPacks').onclick = () => openPacksPage('mine');     // the book: your library
+$('#btnBrowse').onclick = () => openPacksPage('browse');  // the cart: community packs
 $('#pgBack').onclick = closePacksPage;
 $('#pgNew').onclick = () => { if (!state.lineups.length) { toast('Nothing to export yet', true); return; } openBuilder({}); };
 $('#pgImport').onclick = () => $('#packFile').click();
@@ -2067,7 +2181,7 @@ function renderPacks() {
   const box = $('#packs'); const packs = state.packs || [];
   box.innerHTML = '';
   if (homePack && !packById(homePack)) homePack = null;
-  $('#packsLabel').textContent = packs.length ? `Packs · ${packs.length}` : 'Packs';
+  $('#packsLabel').textContent = packs.length ? `Library · ${packs.length}` : 'Library';
   $('#btnPacks').classList.toggle('on', !!homePack);
   const p = packById(homePack); box.style.display = p ? '' : 'none'; if (!p) return;
   const h = document.createElement('div'); h.className = 'packHead';
@@ -2266,24 +2380,40 @@ let appVersion = null, latestRel = null;
 const newerVersion = (a, b) => { const pa = a.split('.').map(Number), pb = b.split('.').map(Number); for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) > (pb[i] || 0); return false; };
 async function checkVersion(force) {
   try { appVersion = await (await fetch('/api/version', { cache: 'no-store' })).json(); } catch (e) { return; }
-  const foot = $('#foot'); foot.textContent = `Stratlab v${appVersion.version}`;
-  if (!appVersion.repo) return;
-  const a = document.createElement('a'); a.href = '#'; a.textContent = 'Check for updates'; a.onclick = e => { e.preventDefault(); checkVersion(true); };
-  foot.appendChild(document.createTextNode(' · ')); foot.appendChild(a);
+  // the chip in the header says what the check found: a dot (green = up to date, red = newer out,
+  // grey = could not check) and a word; every open checks, a result is reused for ten minutes
+  const chip = $('#verChip'), ver = appVersion.version;
+  const setChip = (text, cls, title) => {   // "v1.0.0 · up to date": the status part hides on narrow windows
+    const [v, s] = text.split(' · '); chip.className = cls; chip.innerHTML = '<i></i><span class="v"></span><span class="s"></span>';
+    chip.querySelector('.v').textContent = v; chip.querySelector('.s').textContent = s ? ` · ${s}` : ''; chip.title = title;
+  };
+  chip.style.display = '';
+  if (!appVersion.repo) { setChip(`v${ver}`, '', `Stratlab v${ver}`); return; }
+  chip.onclick = () => checkVersion(true);
+  setChip(`v${ver} · checking…`, 'can busy', 'Checking GitHub for a newer release');
   const key = 'updChk', now = Date.now(); let latest = null;
-  if (!force) { try { const c = JSON.parse(localStorage.getItem(key) || 'null'); if (c && now - c.at < 86400000) latest = c; } catch (e) {} }
+  if (!force) { try { const c = JSON.parse(localStorage.getItem(key) || 'null'); if (c && now - c.at < 600000) latest = c; } catch (e) {} }
   if (!latest) {
     try {
       const rel = await (await fetch(`https://api.github.com/repos/${appVersion.repo}/releases/latest`, { headers: { Accept: 'application/vnd.github+json' } })).json();
       latest = { at: now, tag: rel.tag_name || '', url: rel.html_url || '' };
       if (latest.tag) { try { localStorage.setItem(key, JSON.stringify(latest)); } catch (e) {} }   // "no release yet" isn't cached, so the first release shows up on the next open
-    } catch (e) { if (force) toast('Could not reach GitHub to check', true); return; }
+    } catch (e) {
+      setChip(`v${ver} · couldn't check`, 'can bad', "Couldn't reach GitHub to check for updates · click to try again");
+      if (force) toast('Could not reach GitHub to check', true);
+      return;
+    }
   }
   const tag = (latest.tag || '').replace(/^v/i, ''), p = $('#updPill');
   if (tag && latest.url && newerVersion(tag, appVersion.version)) {
     latestRel = { tag, url: latest.url }; p.textContent = `Update v${tag}`; p.href = latest.url; p.style.display = '';
+    setChip(`v${ver}`, 'can new', `Stratlab v${tag} is out · the green Update button installs it`);
     if (force) toast(`Stratlab v${tag} is out: click the green Update button`);
-  } else { p.style.display = 'none'; if (force) toast(tag ? `You're up to date (v${appVersion.version})` : 'No release published yet'); }
+  } else {
+    p.style.display = 'none';
+    setChip(`v${ver} · up to date`, 'can ok', `Stratlab v${ver} is the newest release · click to check again`);
+    if (force) toast(tag ? `You're up to date (v${ver})` : 'No release published yet');
+  }
 }
 // the Update pill installs in place: the server downloads the installer, checks its checksum and runs it
 // silently; that stops this server and starts the new one, and the page reloads once it answers again

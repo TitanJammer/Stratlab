@@ -191,7 +191,7 @@ function Get-PacksState {   # for the app: member ids trimmed to strats that sti
     $data = Read-Json $dataPath; $have = @{}; foreach ($L in @($data.lineups)) { $have[[string]$L.id] = $true }
     # pscustomobject, not [ordered]: a dictionary written from inside foreach gets unrolled into its entries
     @(foreach ($p in Read-Packs) {
-        [pscustomobject]([ordered]@{ id = $p.id; name = $p.name; description = [string]$p.description; author = [string]$p.author; kind = $p.kind; created = [string]$p.created; updated = [string]$p.updated
+        [pscustomobject]([ordered]@{ id = $p.id; name = $p.name; description = [string]$p.description; author = [string]$p.author; kind = $p.kind; created = [string]$p.created; updated = [string]$p.updated; stamp = [string]$p.stamp
                     ids = [object[]]@(@($p.ids) | ForEach-Object { [string]$_ } | Where-Object { $have[$_] }) })
     })
 }
@@ -390,8 +390,10 @@ function Import-Pack([byte[]]$bytes) {
         $def.name = $p.name; $def.description = $p.description; $def.author = $p.author; $def.updated = $now
         $all = @(@($def.ids) | ForEach-Object { [string]$_ }) + $memberIds | Select-Object -Unique
         if ($def.PSObject.Properties['ids']) { $def.ids = [object[]]$all } else { $def | Add-Member -NotePropertyName ids -NotePropertyValue ([object[]]$all) }
+        if ($def.PSObject.Properties['stamp']) { $def.stamp = $p.created } else { $def | Add-Member -NotePropertyName stamp -NotePropertyValue $p.created }
     } else {
-        $packs = @($packs) + [pscustomobject]([ordered]@{ id = $p.id; name = $p.name; description = $p.description; author = $p.author; kind = 'imported'; created = $now; updated = $now; ids = [object[]]$memberIds })
+        # stamp: when the pack file was exported; Browse compares it with the catalog's to offer updates
+        $packs = @($packs) + [pscustomobject]([ordered]@{ id = $p.id; name = $p.name; description = $p.description; author = $p.author; kind = 'imported'; created = $now; updated = $now; stamp = $p.created; ids = [object[]]$memberIds })
     }
     Write-Packs $packs
     [ordered]@{ ok = $true; name = $p.name; added = $added; updated = $updated }
@@ -446,6 +448,50 @@ function Get-Update {
     if ($want -notmatch '^[0-9a-f]{64}$' -or $want -ne $have) { Remove-Item $file -Force -ErrorAction SilentlyContinue; throw 'The download did not match its checksum, so it was not installed' }
     @{ file = $file; tag = $tag }
 }
+# the community catalog: catalog.json in version.json's "catalog" repository (raw.githubusercontent.com),
+# kept for 10 minutes. Pack files are only ever fetched from that repository's release downloads.
+$catCache = $null; $catAt = [DateTime]::MinValue
+function Get-Catalog([bool]$force) {
+    $repo = [string]$APP.catalog; if (-not $repo -or $repo -notmatch '^[\w.-]+/[\w.-]+$') { throw 'No pack catalog is set up' }
+    if (-not $force -and $catCache -and ((Get-Date) - $catAt).TotalMinutes -lt 10) { return $catCache }
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    # raw.githubusercontent.com is cached for five minutes (whatever the query string); Refresh in the app
+    # (force) reads through the API instead, which is always current but rate limited, so only on demand
+    $raw = $null
+    if ($force) { try { $raw = (Invoke-WebRequest "https://api.github.com/repos/$repo/contents/catalog.json?ref=main" -UseBasicParsing -Headers @{ 'User-Agent' = 'Stratlab'; Accept = 'application/vnd.github.raw+json' } -TimeoutSec 20).Content } catch { $raw = $null } }
+    if (-not $raw) { $raw = (Invoke-WebRequest "https://raw.githubusercontent.com/$repo/main/catalog.json" -UseBasicParsing -Headers @{ 'User-Agent' = 'Stratlab' } -TimeoutSec 20).Content }
+    if ($raw -is [byte[]]) { $raw = [Text.Encoding]::UTF8.GetString($raw) }
+    $c = $raw | ConvertFrom-Json
+    if ([string]$c.format -ne 'stratlab-catalog') { throw 'The catalog could not be read' }
+    $prefix = "https://github.com/$repo/releases/download/"
+    $packs = @(foreach ($p in @($c.packs | ForEach-Object { $_ })) {
+        $id = ([string]$p.id) -replace '[^A-Za-z0-9-]', ''
+        if (-not $id -or -not ([string]$p.file).StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) { continue }
+        [pscustomobject]([ordered]@{
+            id = $id; name = (Clip-Text $p.name 60); description = (Clip-Text $p.description 500); author = (Clip-Text $p.author 40); publisher = (Clip-Text $p.publisher 40)
+            strats = [int]$p.strats; agents = [object[]]@($p.agents | ForEach-Object { Clip-Text $_ 30 }); maps = [object[]]@($p.maps | ForEach-Object { Clip-Text $_ 30 }); types = [object[]]@($p.types | ForEach-Object { Clip-Text $_ 20 })
+            size = [long]$p.size; sha256 = ([string]$p.sha256).ToLower(); stamp = (Clip-Text $p.stamp 30); published = (Clip-Text $p.published 30); updated = (Clip-Text $p.updated 30); file = [string]$p.file })
+    })
+    $script:catCache = [ordered]@{ packs = $packs; updated = (Clip-Text $c.updated 30); fetched = (Get-Date).ToString('s') }; $script:catAt = Get-Date
+    $catCache
+}
+# download one catalog pack (checksum verified) and hold it as the pending import, ready for the preview
+function Get-CatalogPack([string]$id) {
+    $cat = Get-Catalog $false
+    $p = $cat.packs | Where-Object { $_.id -eq $id } | Select-Object -First 1
+    if (-not $p) { $cat = Get-Catalog $true; $p = $cat.packs | Where-Object { $_.id -eq $id } | Select-Object -First 1 }
+    if (-not $p) { throw 'That pack is no longer in the catalog' }
+    if ($p.size -gt $PACK_MAX) { throw 'Pack is too big (over 60 MB)' }
+    $dir = Join-Path $env:TEMP 'Stratlab-packs'; New-Item -ItemType Directory -Force $dir | Out-Null
+    $file = Join-Path $dir "$($p.id).stratlab"
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    Invoke-WebRequest $p.file -OutFile $file -UseBasicParsing -Headers @{ 'User-Agent' = 'Stratlab' } -TimeoutSec 300
+    $bytes = [IO.File]::ReadAllBytes($file); Remove-Item $file -Force -ErrorAction SilentlyContinue
+    if ($bytes.Length -gt $PACK_MAX) { throw 'Pack is too big (over 60 MB)' }
+    $sha = [Security.Cryptography.SHA256]::Create(); try { $have = ([BitConverter]::ToString($sha.ComputeHash($bytes)) -replace '-', '').ToLower() } finally { $sha.Dispose() }
+    if ($p.sha256 -notmatch '^[0-9a-f]{64}$' -or $have -ne $p.sha256) { throw 'The download did not match the catalog, so it was not opened' }
+    , $bytes
+}
 function Open-Window([string]$u) {
     $edge = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
     if (-not (Test-Path $edge)) { $edge = "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe" }
@@ -495,7 +541,16 @@ while ($running) {
         switch -Regex ($path) {
             '^/$'            { Send-Bytes $ctx ([IO.File]::ReadAllBytes($html)) 'text/html; charset=utf-8' }
             '^/api/ping$'    { $lastPing = Get-Date; Send-Json $ctx @{ ok = $true } }
-            '^/api/version$' { Send-Json $ctx @{ version = [string]$APP.version; repo = [string]$APP.repo } }
+            '^/api/version$' { Send-Json $ctx @{ version = [string]$APP.version; repo = [string]$APP.repo; catalog = [string]$APP.catalog; discord = [string]$APP.discord } }
+            # the community catalog (Packs > Browse); fetch: download one pack and queue it as the pending import
+            '^/api/catalog$' { Send-Json $ctx (Get-Catalog ($ctx.Request.QueryString['force'] -eq '1')) }
+            '^/api/catalog/fetch$' {
+                $req = Read-Body $ctx | ConvertFrom-Json
+                $bytes = Get-CatalogPack (([string]$req.id) -replace '[^A-Za-z0-9-]', '')
+                $pv = Preview-Pack $bytes; $pv['pending'] = $true
+                $pendingPack = $bytes
+                Send-Json $ctx $pv
+            }
             '^/api/update$'  {   # download the latest installer from the release, verify its checksum, run it silently
                 $u = Get-Update
                 Send-Json $ctx @{ ok = $true; tag = $u.tag }

@@ -1,4 +1,6 @@
 {
-    "version": "1.0.0",
-    "repo": "TitanJammer/Stratlab"
+    "version":  "1.0.1",
+    "repo":  "TitanJammer/Stratlab",
+    "catalog":  "TitanJammer/stratlab-packs",
+    "discord":  ""
 }
