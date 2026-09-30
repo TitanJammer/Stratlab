@@ -1,6 +1,7 @@
 # Your own library: strats, packs, screenshots and backups stay on this PC
 data/lineups.json
 data/packs.json
+data/votes.json
 data/lineups.backup-*.json
 backup/
 assets/*.png

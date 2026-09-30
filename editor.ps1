@@ -32,6 +32,22 @@ function Read-Json([string]$path) { Get-Content $path -Raw -Encoding UTF8 | Conv
 # and the choice saved to config.json "monitor"; a running overlay notices the file change and moves
 Add-Type -AssemblyName System.Windows.Forms
 $configPath = Join-Path $root 'config.json'
+# Valorant's display mode, read from the game's own settings file (read only, nothing touches the game):
+# 0 = Fullscreen (the game draws over the overlay), 1 = Windowed Fullscreen, 2 = Windowed, $null = unknown
+function Get-DisplayMode {
+    try {
+        $dir = Join-Path $env:LOCALAPPDATA 'VALORANT\Saved\Config'
+        if (-not (Test-Path $dir)) { return $null }
+        $ini = Get-ChildItem $dir -Recurse -Filter 'GameUserSettings.ini' -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match '\\WindowsClient\\' } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        if (-not $ini) { return $null }
+        $sec = ''; $mode = $null
+        foreach ($line in [IO.File]::ReadAllLines($ini.FullName)) {
+            if ($line -match '^\[(.+)\]') { $sec = $Matches[1]; continue }
+            if ($sec -eq '/Script/ShooterGame.ShooterGameUserSettings' -and $line -match '^FullscreenMode=(\d)') { $mode = [int]$Matches[1] }
+        }
+        $mode
+    } catch { $null }
+}
 function Get-Monitors {
     $cur = 1; if (Test-Path $configPath) { try { $c = Read-Json $configPath; if ($c.monitor) { $cur = [int]$c.monitor } } catch {} }
     $i = 0
@@ -492,6 +508,34 @@ function Get-CatalogPack([string]$id) {
     if ($p.sha256 -notmatch '^[0-9a-f]{64}$' -or $have -ne $p.sha256) { throw 'The download did not match the catalog, so it was not opened' }
     , $bytes
 }
+# upvotes: a vote is one line posted to a private Discord channel through a webhook (version.json "votes");
+# the catalog bot tallies those lines, one vote per install, into catalog.json. Locally, data\votes.json
+# remembers this install's id and what it voted for, so the buttons show as pressed and a click un-votes.
+$votesPath = Join-Path $root 'data\votes.json'
+function Read-Votes {
+    $v = if (Test-Path $votesPath) { try { Read-Json $votesPath } catch { $null } } else { $null }
+    $id = if ($v -and $v.installId) { [string]$v.installId } else { [guid]::NewGuid().ToString() }
+    $voted = @{}; if ($v -and $v.voted) { foreach ($p in $v.voted.PSObject.Properties) { if ($p.Value) { $voted[$p.Name] = 1 } } }
+    @{ installId = $id; voted = $voted }
+}
+function Write-Votes($v) { [IO.File]::WriteAllText($votesPath, ([ordered]@{ installId = $v.installId; voted = $v.voted } | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding $false)) }
+function Send-Vote($req) {
+    $hook = [string]$APP.votes
+    if (-not $hook -or $hook -notmatch '^https://(discord\.com|discordapp\.com)/api/webhooks/\d+/[A-Za-z0-9_-]+$') { throw 'Voting is not set up in this build' }
+    $kind = [string]$req.kind; if (@('pack', 'strat') -notcontains $kind) { throw 'Bad vote' }
+    $pack = ([string]$req.pack) -replace '[^A-Za-z0-9-]', ''; $src = ([string]$req.source) -replace '[^a-z0-9-]', ''
+    if (-not $pack -or ($kind -eq 'strat' -and -not $src)) { throw 'Bad vote' }
+    $v = Read-Votes
+    $key = if ($kind -eq 'pack') { "pack:$pack" } else { "strat:$pack/$src" }
+    $up = -not $v.voted.ContainsKey($key)
+    $line = [ordered]@{ v = 1; id = $v.installId; k = $kind; p = $pack; u = $(if ($up) { 1 } else { 0 }) }; if ($kind -eq 'strat') { $line['s'] = $src }
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    $body = @{ content = 'vote ' + ($line | ConvertTo-Json -Compress); allowed_mentions = @{ parse = @() } } | ConvertTo-Json -Compress -Depth 4
+    Invoke-WebRequest $hook -Method Post -ContentType 'application/json' -Body ([Text.Encoding]::UTF8.GetBytes($body)) -UseBasicParsing -Headers @{ 'User-Agent' = 'Stratlab' } -TimeoutSec 20 | Out-Null
+    if ($up) { $v.voted[$key] = 1 } else { $v.voted.Remove($key) }
+    Write-Votes $v
+    @{ voted = $up }
+}
 function Open-Window([string]$u) {
     $edge = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
     if (-not (Test-Path $edge)) { $edge = "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe" }
@@ -541,7 +585,10 @@ while ($running) {
         switch -Regex ($path) {
             '^/$'            { Send-Bytes $ctx ([IO.File]::ReadAllBytes($html)) 'text/html; charset=utf-8' }
             '^/api/ping$'    { $lastPing = Get-Date; Send-Json $ctx @{ ok = $true } }
-            '^/api/version$' { Send-Json $ctx @{ version = [string]$APP.version; repo = [string]$APP.repo; catalog = [string]$APP.catalog; discord = [string]$APP.discord } }
+            '^/api/version$' { Send-Json $ctx @{ version = [string]$APP.version; repo = [string]$APP.repo; catalog = [string]$APP.catalog; discord = [string]$APP.discord; votes = [bool]([string]$APP.votes) } }
+            # upvotes: GET what this install voted for; POST { kind: pack|strat, pack, source } toggles a vote
+            '^/api/votes$' { $v = Read-Votes; Send-Json $ctx @{ voted = [string[]]@($v.voted.Keys) } }
+            '^/api/vote$'  { $req = Read-Body $ctx | ConvertFrom-Json; Send-Json $ctx (Send-Vote $req) }
             # the community catalog (Packs > Browse); fetch: download one pack and queue it as the pending import
             '^/api/catalog$' { Send-Json $ctx (Get-Catalog ($ctx.Request.QueryString['force'] -eq '1')) }
             '^/api/catalog/fetch$' {
@@ -599,8 +646,8 @@ while ($running) {
                 if ($ctx.Request.HttpMethod -eq 'POST') {
                     if ($op) { Stop-Process -Id $op.Id -Force; Remove-Item $pidFile -ErrorAction SilentlyContinue; $on = $false }
                     else { Start-Process wscript.exe -ArgumentList "`"$(Join-Path $root 'overlay.vbs')`"" -WorkingDirectory $root; $on = $true }   # via .vbs: no console flash
-                    Send-Json $ctx @{ running = $on }
-                } else { Send-Json $ctx @{ running = ($null -ne $op) } }
+                    Send-Json $ctx @{ running = $on; display = (Get-DisplayMode) }
+                } else { Send-Json $ctx @{ running = ($null -ne $op); display = (Get-DisplayMode) } }   # display: the game's display mode, see Get-DisplayMode
             }
             '^/assets/'      {
                 $rel = [Uri]::UnescapeDataString($path.Substring(1)) -replace '/', '\'

@@ -41,6 +41,16 @@ are published by posting the `.stratlab` file in the Stratlab Discord's #share-p
 in `version.json` is the invite behind the Discord button and the Marketplace's join link. The book
 button is your own **Library** of packs.
 
+**Upvotes**: with `"votes"` in `version.json` set to a Discord webhook URL (see the packs repository's
+README), marketplace packs and the strats inside them get an upvote button (the details page of a strat
+that came from a pack). One vote per install; the bot tallies them into the catalog, and "Top rated" sorts
+by them. Your own strats have no vote button: only published ("original") strats can be voted on.
+
+**Display mode**: the overlay is a window on top of the game, so Valorant must run in **Windowed
+Fullscreen** (Settings › Video › General › Display Mode). The app reads the game's own settings file and
+shows an amber **Fullscreen** warning next to the Overlay button while the game is set to exclusive
+Fullscreen.
+
 ## The app
 
 **Stratlab** on your desktop (and in the Start menu) opens the app in its own window, no

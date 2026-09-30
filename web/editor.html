@@ -689,6 +689,12 @@
   .mkOpt i.map { width: 34px; height: 20px; border-radius: 5px; background-position: center; }
   .mkOpt .n { margin-left: auto; padding-left: 12px; font-size: 11px; color: rgba(255,255,255,.4); }
   .mkSort { margin-left: auto; }
+  /* upvote: "▲ 12"; pressed = red. On marketplace tiles and on the details page of a strat that came from a pack */
+  .vote { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
+  .vote svg { width: 12px; height: 12px; }
+  .vote.on { color: #fff; background: rgba(255,70,85,.18) !important; box-shadow: inset 0 0 0 1.5px rgba(255,70,85,.7); }
+  .vote.on svg { fill: var(--accent); stroke: var(--accent); }
+  .vote:disabled { opacity: .55; cursor: default; }
   .mkClear { background: transparent; color: var(--dim); font-size: 12.5px; padding: 7px 10px; } .mkClear:hover { color: var(--text); }
   .ptile { position: relative; min-height: 230px; border-radius: 18px; overflow: hidden; background: #111113; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); cursor: pointer; display: flex; flex-direction: column; justify-content: flex-end;
     transition: transform .22s var(--ease), box-shadow .22s var(--ease); animation: rise .4s var(--ease) both; }
@@ -728,6 +734,9 @@
   #verChip.busy i { animation: pulseDim 1s ease-in-out infinite; }
   @keyframes pulseDim { 50% { opacity: .4; } }
   .updPill { height: 34px; padding: 0 12px; border-radius: 999px; display: flex; align-items: center; font-size: 12.5px; font-weight: 600; color: #fff; text-decoration: none; background: rgba(95,201,107,.16); box-shadow: inset 0 0 0 1px rgba(95,201,107,.5); }
+  /* amber warning next to the Overlay button: Valorant is in exclusive Fullscreen, where the game draws over the overlay */
+  .warnPill { height: 34px; padding: 0 12px; border-radius: 999px; display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; color: #ffd28a; background: rgba(255,178,68,.12); box-shadow: inset 0 0 0 1px rgba(255,178,68,.45); cursor: pointer; }
+  .warnPill svg { width: 15px; height: 15px; } .warnPill:hover { background: rgba(255,178,68,.2); }
   .updPill:hover { background: rgba(95,201,107,.28); }
   .packHead { display: flex; gap: 16px; align-items: flex-start; padding: 14px 16px; border-radius: 14px; background: #111113; box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); animation: rise .3s var(--ease) both; }
   .packHead .ph1 { flex: 1; min-width: 0; }
@@ -894,6 +903,7 @@
       <button id="btnMonitor" class="ghost iconBtn" title="Screen: which monitor the overlay shows on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M9 20h6M12 16v4"/></svg><i class="cnt" id="monLabel"></i></button>
       <div class="monPop" id="monPop"><div class="monHead">Overlay shows on</div><div class="monMap" id="monMap"></div><div class="monHint">Click a screen. A running overlay moves right away.</div></div>
     </div>
+    <span id="fsWarn" class="warnPill" style="display:none" title="Valorant is set to Fullscreen, so the game draws over the overlay. Click for how to fix it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Fullscreen</span>
     <button id="btnOverlay" title="Start or stop the in-game overlay">Overlay: off</button>
     <button class="primary" id="btnNew">+ New strat</button>
   </header>
@@ -961,6 +971,7 @@
         <span class="hint">Pick a step, then drop, click or paste (Ctrl+V) pictures. Drag the crosshair to aim each picture's zoom.</span>
         <span class="sp"></span>
         <button class="ghost" id="btnDelete" style="display:none">Delete</button>
+        <button class="ghost vote" id="btnVote" style="display:none" title="Upvote this strat (it came from a marketplace pack)"></button>
         <button class="ghost" id="btnExport" style="display:none" title="Save this strat as a .stratlab pack (as last saved)">Export</button>
         <button id="btnPreview">Preview</button>
         <button class="primary" id="btnSave">Save strat</button>
@@ -1092,8 +1103,22 @@ fetch('/api/ping');
   ng.putImageData(d, 0, 0); $('#bgGrain').style.backgroundImage = `url('${n.toDataURL('image/png')}')`;
 })();
 // overlay start / stop from the app
+// The overlay is a window on top of the game, so Valorant must be in Windowed Fullscreen (Settings › Video ›
+// Display Mode). The server reads the game's display mode from its settings file: 0 = Fullscreen (warn),
+// 1 = Windowed Fullscreen, 2 = Windowed, null = could not tell (then a one-time hint when the overlay starts).
+const FS_HOWTO = 'In Valorant open Settings › Video › General and set Display Mode to Windowed Fullscreen. In Fullscreen the game draws over the overlay, so it never shows. The change takes effect right away; no restart needed.';
+let displayMode = null;
+function showDisplay(mode) {
+  displayMode = mode;
+  $('#fsWarn').style.display = mode === 0 ? '' : 'none';
+}
+$('#fsWarn').onclick = () => confirmModal(`Valorant is set to Fullscreen, so the overlay can't show over the game. ${FS_HOWTO}`, () => {}, 'Got it');
 async function overlayStatus() {
-  try { const r = await (await fetch('/api/overlay')).json(); $('#btnOverlay').textContent = r.running ? 'Overlay: on' : 'Overlay: off'; $('#btnOverlay').classList.toggle('primary', !!r.running); } catch (e) {}
+  try {
+    const r = await (await fetch('/api/overlay')).json();
+    $('#btnOverlay').textContent = r.running ? 'Overlay: on' : 'Overlay: off'; $('#btnOverlay').classList.toggle('primary', !!r.running);
+    showDisplay(r.display);
+  } catch (e) {}
 }
 // overlay screen picker: the monitors drawn to scale in their real arrangement, the chosen one in red
 let monitors = null;
@@ -1129,7 +1154,10 @@ document.addEventListener('click', () => $('#monPop').classList.remove('show'));
 loadMonitors();
 $('#btnOverlay').onclick = async () => {
   const r = await (await fetch('/api/overlay', { method: 'POST', body: JSON.stringify({ toggle: true }) })).json();
-  toast(r.running ? 'Overlay started. It shows up at agent select.' : 'Overlay stopped.');
+  showDisplay(r.display);
+  if (r.running && r.display === 0) confirmModal(`Overlay started, but Valorant is set to Fullscreen, so it won't show over the game. ${FS_HOWTO}`, () => {}, 'Got it');
+  else if (r.running && r.display == null && !localStorage.getItem('fsHint')) { try { localStorage.setItem('fsHint', '1'); } catch (e) {} confirmModal(`Overlay started. It shows up at agent select. One thing to check once: ${FS_HOWTO}`, () => {}, 'Got it'); }
+  else toast(r.running ? 'Overlay started. It shows up at agent select.' : 'Overlay stopped.');
   overlayStatus();
 };
 overlayStatus(); setInterval(overlayStatus, 15000);
@@ -1425,6 +1453,7 @@ function openWizard(L) {
   }
   $('#btnDelete').style.display = L ? '' : 'none';
   $('#btnExport').style.display = L ? '' : 'none';   // a saved strat can be exported on its own
+  wizPack = L && L.pack ? { id: L.pack.id, source: L.pack.source } : null; updateVoteBtn();   // upvote only for a strat that came from a pack
   roleFilter = L ? ((state.agents.find(a => a.name === L.agent) || {}).role || null) : null;   // new: start at the role blocks
   renderTiles();
   $('#wiz').classList.add('open');
@@ -2151,7 +2180,7 @@ async function renderBrowse(force) {
     (f.show === 'all' || (f.show === 'new' ? catalogStatus(p) === 'new' : f.show === 'have' ? catalogStatus(p) !== 'new' : catalogStatus(p) === 'upd')) &&
     (!f.days || now - Date.parse(p.updated || p.published || 0) <= f.days * dayMs));
   const t = s => Date.parse(s || 0) || 0;
-  packs.sort(f.sort === 'name' ? (a, b) => a.name.localeCompare(b.name) : f.sort === 'strats' ? (a, b) => (b.strats || 0) - (a.strats || 0) : f.sort === 'updated' ? (a, b) => t(b.updated) - t(a.updated) : (a, b) => t(b.published) - t(a.published));
+  packs.sort(f.sort === 'name' ? (a, b) => a.name.localeCompare(b.name) : f.sort === 'strats' ? (a, b) => (b.strats || 0) - (a.strats || 0) : f.sort === 'top' ? (a, b) => (b.votes || 0) - (a.votes || 0) || t(b.published) - t(a.published) : f.sort === 'updated' ? (a, b) => t(b.updated) - t(a.updated) : (a, b) => t(b.published) - t(a.published));
   if (!packs.length) {
     const d = document.createElement('div'); d.className = 'pgEmpty';
     d.innerHTML = `<h3>No packs match</h3><p>Loosen a filter or try another search.</p>`;
@@ -2205,7 +2234,7 @@ function marketFilters(all) {
   bar.appendChild(sel('Posted', [{ v: 0, text: 'Any time' }, { v: 7, text: 'This week' }, { v: 30, text: 'This month' }, { v: 90, text: 'Last 3 months' }], () => mkt.days, v => { mkt.days = v; }));
   const active = mkt.agent || mkt.map || mkt.type || mkt.show !== 'all' || mkt.days || browseQ.trim();
   if (active) { const c = document.createElement('button'); c.className = 'mkClear'; c.textContent = 'Clear'; c.onclick = () => { Object.assign(mkt, { agent: null, map: null, type: null, show: 'all', days: 0 }); browseQ = ''; $('#pgSearch').value = ''; renderBrowse(false); }; bar.appendChild(c); }
-  bar.appendChild(sel('Sort', [{ v: 'newest', text: 'Newest' }, { v: 'updated', text: 'Recently updated' }, { v: 'strats', text: 'Most strats' }, { v: 'name', text: 'Name' }], () => mkt.sort, v => { mkt.sort = v; }, 'mkSort'));
+  bar.appendChild(sel('Sort', [{ v: 'newest', text: 'Newest' }, { v: 'top', text: 'Top rated' }, { v: 'updated', text: 'Recently updated' }, { v: 'strats', text: 'Most strats' }, { v: 'name', text: 'Name' }], () => mkt.sort, v => { mkt.sort = v; }, 'mkSort'));
   return bar;
 }
 function catalogStatus(p) {
@@ -2245,8 +2274,44 @@ function catalogTile(p, i) {
   if (status === 'new') main = btn('Install', 'primary', () => installFromCatalog(p), 'Download the pack and preview what is inside');
   else if (status === 'upd') { main = btn('Update', 'primary', () => installFromCatalog(p), 'Get the newer version; your copy of its strats is replaced'); btn('Open', '', open, 'Show only this pack on home'); }
   else { main = btn('Open', 'primary', open, 'Show only this pack on home'); if (status === 'have') btn('Reinstall', 'ghost', () => installFromCatalog(p)); }
+  if (appVersion && appVersion.votes || p.votes) {   // the upvote: count from the catalog, pressed when this install voted
+    const { base, on } = shownCount('pack', p.id, null, p.votes);
+    const v = btn('', 'ghost vote', () => {}, on ? 'Remove your upvote' : 'Upvote this pack'); fillVote(v, base + (on ? 1 : 0), on);
+    v.onclick = e => { e.stopPropagation(); castVote('pack', p.id, null, v, base); };
+  }
   t.onclick = () => main.click();
   return t;
+}
+// upvotes. What this install voted for comes from the server (data\votes.json); the counts come from the
+// catalog, where the bot tallies everyone's votes (one per install). Only packs and the strats inside them
+// ("original" strats) can be voted for: your own strats have no public identity.
+let votedSet = new Set(), wizPack = null;
+async function loadVotes() { try { const r = await (await fetch('/api/votes')).json(); votedSet = new Set(r.voted || []); } catch (e) {} }
+const voteKey = (kind, pack, source) => kind === 'pack' ? `pack:${pack}` : `strat:${pack}/${source}`;
+function fillVote(btn, count, on) { btn.innerHTML = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M6 2.5 10 8H2z"/></svg>'; btn.appendChild(document.createTextNode(String(count))); btn.classList.toggle('on', on); }
+async function castVote(kind, pack, source, btn, baseCount) {
+  if (!appVersion || !appVersion.votes) { toast('Voting is not set up in this build', true); return; }
+  btn.disabled = true;
+  try {
+    const r = await (await fetch('/api/vote', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, pack, source }) })).json();
+    if (r.error) throw new Error(r.error);
+    const key = voteKey(kind, pack, source); if (r.voted) votedSet.add(key); else votedSet.delete(key);
+    fillVote(btn, baseCount + (r.voted ? 1 : 0), r.voted);
+    toast(r.voted ? 'Upvoted. Counts update within a few minutes.' : 'Vote removed.');
+  } catch (e) { toast(e.message, true); }
+  btn.disabled = false;
+}
+// the count the catalog knows, minus this install's own vote if it is in there (so a toggle shows right)
+function shownCount(kind, pack, source, catalogCount) { const on = votedSet.has(voteKey(kind, pack, source)); return { base: Math.max(0, (catalogCount || 0) - (on ? 1 : 0)), on }; }
+async function ensureCatalog() { if (catalog) return catalog; try { const r = await (await fetch('/api/catalog')).json(); if (!r.error) { catalog = r; catalogAt = Date.now(); } } catch (e) {} return catalog; }
+async function updateVoteBtn() {
+  const b = $('#btnVote'); b.style.display = 'none';
+  if (!wizPack || !wizPack.source) return;
+  const c = await ensureCatalog(); if (!c) return;
+  const entry = (c.packs || []).find(p => p.id === wizPack.id); if (!entry) return;   // not (or no longer) a marketplace pack
+  const { base, on } = shownCount('strat', wizPack.id, wizPack.source, (entry.stratVotes || {})[wizPack.source]);
+  fillVote(b, base + (on ? 1 : 0), on); b.style.display = '';
+  b.onclick = () => castVote('strat', wizPack.id, wizPack.source, b, base);
 }
 async function installFromCatalog(p) {
   toast(`Downloading "${p.name}"…`);
@@ -2527,7 +2592,7 @@ async function runUpdate() {
   };
   setTimeout(poll, 6000);
 }
-load().then(checkPendingImport);
+load().then(checkPendingImport); loadVotes();
 checkVersion();
 </script>
 </body>
