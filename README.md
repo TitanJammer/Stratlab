@@ -31,13 +31,15 @@ latest release every time it opens. The version chip in the header says what it 
 button when a newer release is out; that button downloads the installer, verifies it against the
 published checksum, installs it silently and restarts the app, keeping your strats.
 
-**Community packs**: with `"catalog": "owner/name"` set in `version.json`, the **Browse** button in the
-header (the cart) lists the packs published in that repository's `catalog.json`
-(see [stratlab-packs](https://github.com/TitanJammer/stratlab-packs)). Install downloads the pack from
-the repository's releases, checks its SHA-256 against the catalog and opens the usual import preview;
-an installed pack shows **Installed**, or **Update** when a newer export was published. Packs are
-published by posting the `.stratlab` file in the Stratlab Discord's drop channel; `"discord"` in
-`version.json` is the invite link shown in Browse. The **Library** button (the book) is your own packs.
+**Marketplace**: with `"catalog": "owner/name"` set in `version.json`, the cart button in the header
+opens the Marketplace: the packs published in that repository's `catalog.json`
+(see [stratlab-packs](https://github.com/TitanJammer/stratlab-packs)), with filters by agent, map, strat
+type, installed state and how recently they were posted, plus sorting and search. Install downloads the
+pack from the repository's releases, checks its SHA-256 against the catalog and opens the usual import
+preview; an installed pack shows **Installed**, or **Update** when a newer export was published. Packs
+are published by posting the `.stratlab` file in the Stratlab Discord's #share-packs channel; `"discord"`
+in `version.json` is the invite behind the Discord button and the Marketplace's join link. The book
+button is your own **Library** of packs.
 
 ## The app
 

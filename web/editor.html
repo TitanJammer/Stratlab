@@ -63,8 +63,8 @@
   .brand { display: flex; align-items: center; gap: 4px; }
   .brand h1 { font-size: 15px; margin: 0; letter-spacing: .3px; font-weight: 600; white-space: nowrap; }
   /* wordmark: a small plain "THE" above the condensed title, both in the app's DIN face */
-  .wordmark { display: flex; align-items: center; line-height: 1; margin: 0; }
-  .wordmark .the { font: 500 9px var(--font); letter-spacing: .3em; color: rgba(255,255,255,.7); padding-left: 1px; }
+  .wordmark { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; line-height: 1; margin: 0; }
+  .wordmark .by { font: 500 9.5px var(--font); letter-spacing: .14em; color: rgba(255,255,255,.5); padding-left: 1px; }   /* "BY TITAN JAMMER" under the title */
   .wordmark .name { font-family: var(--font); font-weight: 800; font-size: 20px; letter-spacing: .01em; color: #fff; text-transform: uppercase; }
   .wordmark .name em { font-style: normal; color: var(--accent); }   /* STRAT white, LAB in the brand red */
   .brand small { color: var(--key); font-size: 11px; letter-spacing: 1.2px; display: block; margin-top: -2px; }
@@ -670,6 +670,19 @@
   .pgNote { max-width: 1760px; margin: 0 auto 24px; padding: 13px 18px; border-radius: 14px; background: #111113; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); font-size: 13px; color: var(--dim); display: flex; align-items: center; gap: 12px; animation: rise .4s var(--ease) both; }
   .pgNote b { color: var(--text); font-weight: 600; } .pgNote .sp { flex: 1; }
   .pgNote a { color: #a9bcff; text-decoration: none; font-weight: 600; white-space: nowrap; } .pgNote a:hover { text-decoration: underline; }
+  /* marketplace filters: one row per facet, chips; a facet's active chip is red, click again to clear */
+  .mkFilters { max-width: 1760px; margin: 0 auto 22px; display: flex; flex-direction: column; gap: 8px; animation: rise .4s var(--ease) both; }
+  .mkRow { display: flex; align-items: flex-start; gap: 12px; }
+  .mkLbl { flex: none; width: 58px; padding-top: 7px; font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--key); }
+  .mkChips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .mkChip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: #131316; color: var(--dim); font-size: 12px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); transition: background .15s, color .15s, box-shadow .15s; }
+  .mkChip:hover { color: var(--text); background: #1a1a1e; }
+  .mkChip.on { background: rgba(255,70,85,.16); color: #fff; box-shadow: inset 0 0 0 1.5px rgba(255,70,85,.7); }
+  .mkChip i { width: 18px; height: 18px; border-radius: 6px; background: #000 center/cover; background-position: center 12%; margin-left: -4px; }
+  .mkChip.map i { width: 26px; height: 16px; border-radius: 4px; background-position: center; }
+  .mkChip b { font-weight: 500; }
+  .mkChip .n { font-size: 10.5px; color: rgba(255,255,255,.45); margin-left: 1px; } .mkChip.on .n { color: rgba(255,255,255,.7); }
+  .mkClear { margin-left: auto; background: transparent; color: var(--dim); font-size: 12px; padding: 5px 10px; } .mkClear:hover { color: var(--text); }
   .ptile { position: relative; min-height: 230px; border-radius: 18px; overflow: hidden; background: #111113; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); cursor: pointer; display: flex; flex-direction: column; justify-content: flex-end;
     transition: transform .22s var(--ease), box-shadow .22s var(--ease); animation: rise .4s var(--ease) both; }
   .ptile:hover { transform: translateY(-3px); box-shadow: 0 18px 44px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.12); }
@@ -857,7 +870,7 @@
   <header>
     <div class="brand">
       <div class="logo" title="Incendiary"><div class="mark"></div></div>
-      <h1 class="wordmark"><span class="name">STRAT<em>LAB</em></span></h1>
+      <h1 class="wordmark"><span class="name">STRAT<em>LAB</em></span><span class="by">By Titan Jammer</span></h1>
     </div>
     <div class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -867,7 +880,7 @@
     <button id="verChip" title="Stratlab version" style="display:none"></button>
     <a id="updPill" class="updPill" target="_blank" rel="noopener" title="A newer Stratlab is out: opens the download page" style="display:none"></a>
     <button id="btnPacks" class="ghost iconBtn" title="Library: your packs (make, import, export, open one)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15zM9 7h7"/></svg><i class="cnt" id="packsCount"></i></button>
-    <button id="btnBrowse" class="ghost iconBtn" title="Browse: community packs to install"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h2.5l2.2 11.2a2 2 0 0 0 2 1.6h8.7a2 2 0 0 0 2-1.5L21 7H6"/><circle cx="9.5" cy="20" r="1.3"/><circle cx="17.5" cy="20" r="1.3"/></svg></button>
+    <button id="btnBrowse" class="ghost iconBtn" title="Marketplace: community packs to install"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h2.5l2.2 11.2a2 2 0 0 0 2 1.6h8.7a2 2 0 0 0 2-1.5L21 7H6"/><circle cx="9.5" cy="20" r="1.3"/><circle cx="17.5" cy="20" r="1.3"/></svg></button>
     <a id="btnDiscord" class="ghost iconBtn" href="#" target="_blank" rel="noopener" title="Stratlab Discord: share packs, get help"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.2.4a18 18 0 0 1 4.5 2.2 15.5 15.5 0 0 0-15.4 0A18 18 0 0 1 8.8 3.4L8.6 3a19.8 19.8 0 0 0-4.9 1.5C.6 9.1-.2 13.6.2 18.1a19.9 19.9 0 0 0 6 3l1.3-2.1a12.9 12.9 0 0 1-2-1l.5-.4a14.2 14.2 0 0 0 12 0l.5.4a12.9 12.9 0 0 1-2 1l1.3 2.1a19.9 19.9 0 0 0 6-3c.5-5.2-.9-9.7-3.5-13.7zM8.5 15.4c-1.2 0-2.1-1.1-2.1-2.4s.9-2.4 2.1-2.4 2.2 1.1 2.1 2.4c0 1.3-.9 2.4-2.1 2.4zm7 0c-1.2 0-2.1-1.1-2.1-2.4s.9-2.4 2.1-2.4 2.2 1.1 2.1 2.4c0 1.3-.9 2.4-2.1 2.4z"/></svg></a>
     <input type="file" id="packFile" accept=".stratlab,.lineuplab" hidden>
     <div class="monWrap">
@@ -981,7 +994,7 @@
 <!-- the Packs screen: every pack as a tile on its main map, with the agents' portraits -->
 <section id="packsPage">
   <header><button class="ghost" id="pgBack">‹ Back</button><h2>Packs</h2>
-    <div class="pgTabs"><button class="on" data-tab="mine">Your library</button><button data-tab="browse">Browse</button></div><span class="sp"></span>
+    <div class="pgTabs"><button class="on" data-tab="mine">Your library</button><button data-tab="browse">Marketplace</button></div><span class="sp"></span>
     <span id="pgMineBtns"><button id="pgImport" title="Import a .stratlab pack (or drop one on the home page)">Import</button><button class="primary" id="pgNew" title="Pick strats, name the pack, save the .stratlab file">Export strats</button></span>
     <span id="pgBrowseBtns" style="display:none"><input id="pgSearch" placeholder="Search packs, agents, maps" spellcheck="false"><button id="pgRefresh" title="Fetch the catalog again">Refresh</button></span></header>
   <div class="pgBody" id="pgBody"></div>
@@ -2117,17 +2130,68 @@ async function renderBrowse(force) {
   body.innerHTML = ''; usedBanners.clear();
   const q = browseQ.trim().toLowerCase();
   const all = catalog.packs || [];
-  const packs = all.filter(p => !q || [p.name, p.description, p.author, p.publisher, ...(p.agents || []), ...(p.maps || []), ...(p.types || []).map(typeLabel)].join(' ').toLowerCase().includes(q));
   body.appendChild(browseNote());
+  if (!all.length) {
+    const d = document.createElement('div'); d.className = 'pgEmpty';
+    d.innerHTML = `<h3>No packs published yet</h3><p>Be the first: export a pack and post the .stratlab file in the Discord channel.</p>`;
+    body.appendChild(d); return;
+  }
+  body.appendChild(marketFilters(all));
+  const f = mkt, dayMs = 86400000, now = Date.now();
+  const packs = all.filter(p =>
+    (!q || [p.name, p.description, p.author, p.publisher, ...(p.agents || []), ...(p.maps || []), ...(p.types || []).map(typeLabel)].join(' ').toLowerCase().includes(q)) &&
+    (!f.agent || (p.agents || []).includes(f.agent)) && (!f.map || (p.maps || []).includes(f.map)) && (!f.type || (p.types || []).includes(f.type)) &&
+    (f.show === 'all' || (f.show === 'new' ? catalogStatus(p) === 'new' : f.show === 'have' ? catalogStatus(p) !== 'new' : catalogStatus(p) === 'upd')) &&
+    (!f.days || now - Date.parse(p.updated || p.published || 0) <= f.days * dayMs));
+  const t = s => Date.parse(s || 0) || 0;
+  packs.sort(f.sort === 'name' ? (a, b) => a.name.localeCompare(b.name) : f.sort === 'strats' ? (a, b) => (b.strats || 0) - (a.strats || 0) : f.sort === 'updated' ? (a, b) => t(b.updated) - t(a.updated) : (a, b) => t(b.published) - t(a.published));
   if (!packs.length) {
     const d = document.createElement('div'); d.className = 'pgEmpty';
-    d.innerHTML = all.length ? `<h3>No packs match</h3><p>Try another name, agent or map.</p>` : `<h3>No packs published yet</h3><p>Be the first: export a pack and post the .stratlab file in the Discord channel.</p>`;
+    d.innerHTML = `<h3>No packs match</h3><p>Loosen a filter or try another search.</p>`;
     body.appendChild(d); return;
   }
   const sec = document.createElement('section'); sec.className = 'pgSec';
-  sec.innerHTML = `<div class="mapGroup"></div><div class="pgrid"></div>`; sec.querySelector('.mapGroup').textContent = `Community packs · ${packs.length}`;
+  sec.innerHTML = `<div class="mapGroup"></div><div class="pgrid"></div>`; sec.querySelector('.mapGroup').textContent = `Marketplace · ${packs.length}${packs.length !== all.length ? ` of ${all.length}` : ''}`;
   const grid = sec.querySelector('.pgrid'); packs.forEach((p, i) => grid.appendChild(catalogTile(p, i)));
   body.appendChild(sec);
+}
+// the filter rows: agents and maps that occur in the catalog (with how many packs each), strat types,
+// installed state, how recent, and the sort order. One choice per row; clicking it again clears it.
+const mkt = { agent: null, map: null, type: null, show: 'all', days: 0, sort: 'newest' };
+function marketFilters(all) {
+  const box = document.createElement('div'); box.className = 'mkFilters';
+  const count = key => { const c = {}; all.forEach(p => (p[key] || []).forEach(v => { c[v] = (c[v] || 0) + 1; })); return c; };
+  const agentsC = count('agents'), mapsC = count('maps'), typesC = count('types');
+  const agentOrder = state.agents.map(a => a.name).filter(a => agentsC[a]), mapOrder = state.maps.map(m => m.name || m).filter(m => mapsC[m]);
+  const row = (label, chips) => {
+    const r = document.createElement('div'); r.className = 'mkRow';
+    r.innerHTML = `<span class="mkLbl"></span><div class="mkChips"></div>`; r.querySelector('.mkLbl').textContent = label;
+    const wrap = r.querySelector('.mkChips'); chips.forEach(c => wrap.appendChild(c)); return r;
+  };
+  const chip = (text, on, fn, extra) => {
+    const b = document.createElement('button'); b.className = 'mkChip' + (on ? ' on' : '') + (extra && extra.cls ? ' ' + extra.cls : '');
+    if (extra && extra.face) { const i = document.createElement('i'); setFace(i, extra.face); b.appendChild(i); }
+    if (extra && extra.map) { const i = document.createElement('i'); i.style.backgroundImage = `url('${mapImg(extra.map)}')`; b.appendChild(i); }
+    const s = document.createElement('b'); s.textContent = text; b.appendChild(s);
+    if (extra && extra.n) { const n = document.createElement('span'); n.className = 'n'; n.textContent = extra.n; b.appendChild(n); }
+    b.onclick = () => { fn(); renderBrowse(false); }; return b;
+  };
+  const pick = (key, v) => () => { mkt[key] = mkt[key] === v ? null : v; };
+  if (agentOrder.length) box.appendChild(row('Agent', agentOrder.map(a => chip(a, mkt.agent === a, pick('agent', a), { face: a, n: agentsC[a] }))));
+  if (mapOrder.length) box.appendChild(row('Map', mapOrder.map(m => chip(m, mkt.map === m, pick('map', m), { map: m, cls: 'map', n: mapsC[m] }))));
+  const typeOrder = TYPES.map(t => t.key).filter(k => typesC[k]);
+  if (typeOrder.length) box.appendChild(row('Type', typeOrder.map(k => chip(typeLabel(k), mkt.type === k, pick('type', k), { n: typesC[k] }))));
+  box.appendChild(row('Show', [['all', 'All'], ['new', 'Not installed'], ['have', 'Installed'], ['upd', 'Updates']].map(([k, l]) => chip(l, mkt.show === k, () => { mkt.show = k; }))));
+  box.appendChild(row('Posted', [[0, 'Any time'], [7, 'This week'], [30, 'This month'], [90, 'Last 3 months']].map(([d, l]) => chip(l, mkt.days === d, () => { mkt.days = d; }))));
+  const sortRow = row('Sort', [['newest', 'Newest'], ['updated', 'Recently updated'], ['strats', 'Most strats'], ['name', 'Name']].map(([k, l]) => chip(l, mkt.sort === k, () => { mkt.sort = k; })));
+  const active = mkt.agent || mkt.map || mkt.type || mkt.show !== 'all' || mkt.days || mkt.sort !== 'newest' || browseQ.trim();
+  if (active) { const c = document.createElement('button'); c.className = 'mkClear'; c.textContent = 'Clear filters'; c.onclick = () => { Object.assign(mkt, { agent: null, map: null, type: null, show: 'all', days: 0, sort: 'newest' }); browseQ = ''; $('#pgSearch').value = ''; renderBrowse(false); }; sortRow.appendChild(c); }
+  box.appendChild(sortRow);
+  return box;
+}
+function catalogStatus(p) {
+  const local = (state.packs || []).find(x => x.id === p.id);
+  return !local ? 'new' : local.kind === 'own' ? 'own' : (p.stamp && local.stamp && p.stamp !== local.stamp ? 'upd' : 'have');
 }
 function browseNote() {
   const n = document.createElement('div'); n.className = 'pgNote';
