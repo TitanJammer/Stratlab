@@ -1,0 +1,18 @@
+# Your own library: strats, packs, screenshots and backups stay on this PC
+data/lineups.json
+data/packs.json
+data/lineups.backup-*.json
+backup/
+assets/*.png
+assets/*.jpg
+assets/*.jpeg
+assets/*.gif
+!assets/app-icon.png
+
+# Per-PC state
+config.json
+overlay.pid
+*.log
+
+# Build output (goes on GitHub Releases, not in the repo)
+dist/

@@ -1,0 +1,27 @@
+{
+    "monitor":  1,
+    "width":  372,
+    "anchor":  "top-right",
+    "offsetX":  16,
+    "offsetY":  296,
+    "autoDetect":  true,
+    "autoShow":  true,
+    "onlyInGame":  true,
+    "hotkeys":  {
+                    "prevLineup":  "Down",
+                    "nextLineup":  "Up",
+                    "prevStep":  "Left",
+                    "nextStep":  "Right",
+                    "nextOption":  "",
+                    "nextType":  "\\",
+                    "nextAgent":  "",
+                    "nextMap":  "",
+                    "toggle":  "=",
+                    "nextMonitor":  "",
+                    "nudgeLeft":  "Alt+Left",
+                    "nudgeRight":  "Alt+Right",
+                    "nudgeUp":  "Alt+Up",
+                    "nudgeDown":  "Alt+Down",
+                    "quit":  "Ctrl+Shift+Q"
+                }
+}
