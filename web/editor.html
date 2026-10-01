@@ -242,7 +242,7 @@
   #wiz.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
   /* a closed wizard/modal must not take clicks. Children with pointer-events: auto (the active .stage)
      still caught them through the invisible wizard and froze the home page. */
-  #wiz:not(.open) *, #pvModal:not(.show) *, #modal:not(.show) *, #packModal:not(.show) *, #pkBuild:not(.show) * { pointer-events: none !important; }
+  #wiz:not(.open) *, #pvModal:not(.show) *, #trModal:not(.show) *, #modal:not(.show) *, #packModal:not(.show) *, #pkBuild:not(.show) * { pointer-events: none !important; }
   #wiz header { border-bottom: 1px solid var(--line); }
   /* wizard step bar: numbered dots joined by a line; a done step shows what was picked */
   .crumbs { display: flex; gap: 0; align-items: center; flex: 1; justify-content: center; }
@@ -559,6 +559,31 @@
   #fbModal.show { opacity: 1; pointer-events: auto; } #fbModal:not(.show) * { pointer-events: none !important; }
   #fbModal .box { background: var(--panel); padding: 22px 24px; border-radius: 14px; width: 460px; transform: scale(.96); transition: transform .2s var(--ease); }
   #fbModal.show .box { transform: scale(1); }
+  /* clip trimmer: the clip plays the kept stretch on a loop; two handles over a filmstrip pick the start and end */
+  #trModal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 30; backdrop-filter: blur(4px); }
+  #trModal.show { opacity: 1; pointer-events: auto; } #trModal:not(.show) * { pointer-events: none !important; }
+  #trModal .box { background: var(--panel); padding: 22px 24px; border-radius: 14px; width: min(720px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; box-sizing: border-box; transform: scale(.96); transition: transform .2s var(--ease); }
+  #trModal.show .box { transform: scale(1); }
+  #trModal h3 { margin: 0 0 4px; font-size: 17px; } #trModal .sub { margin: 0 0 14px; font-size: 12.5px; color: var(--dim); }
+  /* full width of the box (as wide as the filmstrip); 16:9 tall, or less when the window is short */
+  .trView { position: relative; height: max(140px, min(calc(min(672px, 100vw - 80px) * 9 / 16), calc(100vh - 380px))); border-radius: 10px; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .trView canvas { width: 100%; height: 100%; object-fit: contain; display: block; }   /* small clips scale up to fill the view */
+  .trView .trLoad { position: absolute; font-size: 13px; color: var(--dim); }
+  .trTrack { position: relative; height: 52px; margin-top: 12px; border-radius: 8px; background: #000; overflow: hidden; }
+  .trTrack .trStrip { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .trTrack .trShade { position: absolute; top: 0; bottom: 0; background: rgba(0,0,0,.72); pointer-events: none; }
+  .trTrack .trShade.l { left: 0; } .trTrack .trShade.r { right: 0; }
+  .trTrack .trKeep { position: absolute; top: 0; bottom: 0; border: 2px solid var(--accent); border-radius: 8px; box-sizing: border-box; pointer-events: none; }
+  .trTrack .trHead { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #fff; box-shadow: 0 0 6px rgba(0,0,0,.6); pointer-events: none; }
+  .trTrack input[type=range] { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; -webkit-appearance: none; appearance: none; background: none; outline: none; pointer-events: none; }
+  .trTrack input[type=range]::-webkit-slider-runnable-track { background: none; height: 100%; }
+  .trTrack input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: 14px; height: 52px; border-radius: 6px; background: var(--accent); cursor: ew-resize; box-shadow: 0 0 0 2px rgba(255,255,255,.85) inset; }
+  .trTrack input[type=range]::-moz-range-thumb { pointer-events: auto; width: 14px; height: 52px; border: 0; border-radius: 6px; background: var(--accent); cursor: ew-resize; }
+  .trTimes { display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px; font-size: 12.5px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  .trTimes b { color: var(--text); font-weight: 600; }
+  #trModal .trWarn { margin: 14px 0 16px; padding: 10px 12px; border-radius: 8px; background: rgba(227,195,74,.1); color: #e3c34a; font-size: 12.5px; line-height: 1.45; }
+  #trModal .row { display: flex; gap: 8px; align-items: center; } #trModal .row .sp { flex: 1; }
+  #trModal button:disabled { opacity: .45; cursor: default; }
   #fbModal h3 { margin: 0 0 6px; font-size: 17px; } #fbModal .sub { margin: 0 0 14px; font-size: 12.5px; color: var(--dim); }
   #fbModal textarea { width: 100%; box-sizing: border-box; min-height: 140px; resize: vertical; background: #131316; border: 1px solid var(--line); color: var(--text); border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 13.5px; line-height: 1.45; outline: none; }
   #fbModal textarea:focus, #fbModal input:focus { border-color: #3a3a42; }
@@ -846,7 +871,8 @@
   .picBar .zRow { display: flex; align-items: center; gap: 10px; justify-content: flex-start; }
   .picBar .zRow b { font-size: 13px; font-weight: 600; }
   .picBar .iBox { display: flex; flex-direction: row; align-items: center; gap: 8px; padding: 0; background: none; border-radius: 0; font-size: 12.5px; color: var(--dim); white-space: nowrap; }
-  .picBar [data-a=remove] { margin-left: auto; font-size: 12.5px; }
+  .picBar [data-a=trim] { margin-left: auto; font-size: 12.5px; }
+  .picBar [data-a=remove] { font-size: 12.5px; } .picBar [data-a=trim][style*="none"] + [data-a=remove] { margin-left: auto; }
   .picBar.nopic .zRow, .picBar.nopic .iBox { opacity: .35; pointer-events: none; }
   .zprev { width: 100%; max-width: none; }
   /* shorter windows: tighter details page so the picture keeps a useful size */
@@ -1073,6 +1099,17 @@
   <div class="brow"><button id="bCancel">Cancel</button><button class="ghost" id="bSave">Save</button><button class="primary" id="bExport">Export pack</button></div>
 </div></div>
 <div id="packDrop"><div>Drop the <b>.stratlab</b> pack to import it</div></div>
+<!-- clip trimmer (a GIF on a step): keep a stretch of it; permanent once the strat is saved -->
+<div id="trModal"><div class="box">
+  <h3>Trim clip</h3>
+  <p class="sub">Drag the red handles to keep only the part you want. The kept part plays on a loop.</p>
+  <div class="trView"><canvas></canvas><span class="trLoad">Reading the clip…</span></div>
+  <div class="trTrack"><canvas class="trStrip"></canvas><i class="trShade l"></i><i class="trShade r"></i><i class="trKeep"></i><i class="trHead"></i>
+    <input type="range" class="trA" min="0" step="1" aria-label="Start"><input type="range" class="trB" min="0" step="1" aria-label="End"></div>
+  <div class="trTimes"><span class="trFrom"></span><b class="trLen"></b><span class="trTo"></span></div>
+  <p class="trWarn">Trimming is permanent once you save the strat: the cut parts can't be brought back after that. Until you save, you can open Trim again to change or undo it.</p>
+  <div class="row"><button class="ghost" id="trReset">Undo trim</button><span class="sp"></span><button id="trNo">Cancel</button><button class="primary" id="trYes">Trim</button></div>
+</div></div>
 <div id="modal"><div class="box"><p id="modalText"></p><div class="row"><button id="modalNo">Cancel</button><button class="danger" id="modalYes">Delete</button></div></div></div>
 <!-- feedback: goes to a private channel on the Stratlab Discord through a webhook -->
 <div id="fbModal"><div class="box">
@@ -1375,6 +1412,7 @@ const QUOTES = [
   ['Just play the game bro', 'Enemy Iso'],
   ['DEEP FRIED', 'Brimstone'],
   ['You can fake those btw', 'Yoru'],
+  ["this ain't vct buddy", 'Enemy Veto'],
 ];
 let quoteOrder = [], quoteAt = -1;
 function nextQuote() {
@@ -1862,6 +1900,7 @@ function renderSteps() {
         <span class="pt"></span>
         <div class="zRow"><b>Zoom</b><div class="seg"><i class="segHi"></i><button data-v="off">None</button><button data-v="pulse">Pulse</button><button data-v="hold">Permanent</button></div></div>
         <div class="iBox" title="How long this picture shows before the next one"><span>Shows for</span><div class="stepper"><button data-s="-1" title="0.2 s shorter">&minus;</button><b class="ival"></b><button data-s="1" title="0.2 s longer">+</button></div></div>
+        <button class="ghost" data-a="trim" title="Cut the start or end of this clip">Trim clip</button>
         <button class="ghost" data-a="remove" title="Remove this picture">Remove picture</button>
       </div>
       <!-- the close-up: the same size as the picture, beside it -->
@@ -1895,6 +1934,7 @@ function renderSteps() {
   drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); addFiles(activeStep, e.dataTransfer.files); };
   drop.querySelector('img').onload = () => paintZoom();
   file.onchange = () => { addFiles(activeStep, file.files); file.value = ''; };
+  box.querySelector('[data-a=trim]').onclick = () => { const p = curPic(); if (p && isGif(p)) openTrim(p); };
   box.querySelector('[data-a=remove]').onclick = () => {
     const s = wiz.steps[activeStep]; if (!s.pics.length) return;
     s.pics.splice(s.ix, 1); s.ix = Math.max(0, s.ix - 1); updateStep(activeStep);
@@ -2004,6 +2044,7 @@ function updateStep(i) {
   const addT = document.createElement('div'); addT.className = 'thumb add'; addT.textContent = '+'; addT.title = 'Add pictures'; addT.onclick = () => box.querySelector('input[type=file]').click(); thumbs.appendChild(addT);
   box.querySelector('.pt').textContent = pic ? (s.pics.length > 1 ? `${stepNames()[activeStep]} · ${s.ix + 1} of ${s.pics.length}` : stepNames()[activeStep]) : stepNames()[activeStep];
   box.querySelector('[data-a=remove]').style.visibility = pic ? '' : 'hidden';
+  box.querySelector('[data-a=trim]').style.display = isGif(pic) ? '' : 'none';
   box.querySelector('.edRight').classList.toggle('nopic', !pic); box.querySelector('.picBar').classList.toggle('nopic', !pic);
   paintZoom(); paintInterval(); paintStepMeta();
   requestAnimationFrame(fitPicture);   // the swap-time box may have appeared / gone
@@ -2122,24 +2163,24 @@ function lzwEncode(pixels, minCodeSize, sink) {   // GIF-flavoured LZW, written 
   for (let i = 0; i < all.length; i += 255) { const len = Math.min(255, all.length - i); sink.byte(len); sink.bytes(all.subarray(i, i + len)); }
   sink.byte(0);
 }
-function encodeGif(w, h, frames, pal, delayCs) {
+function encodeGif(w, h, frames, pal, delayCs) {   // delayCs: hundredths of a second, one for all frames or one per frame
   const s = new ByteSink();
   s.str('GIF89a'); s.u16(w); s.u16(h); s.byte(0xF7); s.byte(0); s.byte(0);            // one global 256-colour table
   for (let i = 0; i < 256; i++) { const c = pal[i]; s.byte(c[0]); s.byte(c[1]); s.byte(c[2]); }
   s.byte(0x21); s.byte(0xFF); s.byte(0x0B); s.str('NETSCAPE2.0'); s.byte(3); s.byte(1); s.u16(0); s.byte(0);   // loop forever
   const cache = new Int16Array(32768).fill(-1);
   const nearest = (r, g, b) => { let best = 0, bd = 1e9; for (let i = 0; i < 256; i++) { const c = pal[i], d = (c[0] - r) ** 2 + (c[1] - g) ** 2 + (c[2] - b) ** 2; if (d < bd) { bd = d; best = i; } } return best; };
-  for (const f of frames) {
+  frames.forEach((f, fi) => {
     const idx = new Uint8Array(w * h);
     for (let i = 0, j = 0; i < f.length; i += 4, j++) {
       const key = (f[i] >> 3) << 10 | (f[i + 1] >> 3) << 5 | (f[i + 2] >> 3);
       let k = cache[key]; if (k < 0) { k = nearest(f[i], f[i + 1], f[i + 2]); cache[key] = k; }
       idx[j] = k;
     }
-    s.byte(0x21); s.byte(0xF9); s.byte(4); s.byte(0); s.u16(delayCs); s.byte(0); s.byte(0);   // graphic control: delay, no transparency
+    s.byte(0x21); s.byte(0xF9); s.byte(4); s.byte(0); s.u16(Array.isArray(delayCs) ? delayCs[fi] : delayCs); s.byte(0); s.byte(0);   // graphic control: delay, no transparency
     s.byte(0x2C); s.u16(0); s.u16(0); s.u16(w); s.u16(h); s.byte(0);                            // image descriptor
     s.byte(8); lzwEncode(idx, 8, s);
-  }
+  });
   s.byte(0x3B);
   return s.out();
 }
@@ -2183,6 +2224,119 @@ async function videoToGif(file, onProgress) {
     if (bytes.length > GIF_MAX_BYTES) throw new Error('The clip is too big as a GIF (try a shorter one)');
     return bytesToDataUrl(bytes, 'image/gif');
   } finally { try { v.pause(); } catch (e) {} v.removeAttribute('src'); v.remove(); URL.revokeObjectURL(url); }
+}
+// ---------- trim a clip: keep a stretch of a GIF, cut the rest ----------
+// Trim always works from the clip as it was before any trim in this edit (pic.orig), so until the strat is
+// saved a trim can be widened again or undone; saving writes the trimmed GIF and the cut frames are gone.
+// Frames come from the browser's ImageDecoder (Edge / Chrome), which hands back whole composited frames;
+// a big GIF is scaled down so all its frames fit in TRIM_MAX_BYTES of memory while trimming.
+const TRIM_MAX_BYTES = 400 * 1048576;
+let tr = null;
+async function gifFrames(url) {
+  if (!('ImageDecoder' in window)) throw new Error('Trimming needs Edge or Chrome');
+  const dec = new ImageDecoder({ data: await (await fetch(url)).arrayBuffer(), type: 'image/gif' });
+  try {
+    await dec.tracks.ready;
+    const n = dec.tracks.selectedTrack.frameCount;
+    if (n < 2) throw new Error('This GIF is a single picture, there is nothing to trim');
+    const f0 = (await dec.decode({ frameIndex: 0 })).image;
+    const sc = Math.min(1, Math.sqrt(TRIM_MAX_BYTES / (f0.displayWidth * f0.displayHeight * 4 * n)));
+    const w = Math.max(2, Math.round(f0.displayWidth * sc)), h = Math.max(2, Math.round(f0.displayHeight * sc)); f0.close();
+    const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d', { willReadFrequently: true });
+    const frames = [], delays = [];
+    for (let i = 0; i < n; i++) {
+      const f = (await dec.decode({ frameIndex: i })).image;
+      g.fillStyle = '#000'; g.fillRect(0, 0, w, h); g.drawImage(f, 0, 0, w, h);   // the encoder has no transparency: see-through parts turn black
+      frames.push(g.getImageData(0, 0, w, h));
+      delays.push(Math.max(2, Math.round((f.duration || 100000) / 10000)));       // microseconds -> hundredths of a second
+      f.close();
+    }
+    return { w, h, frames, delays };
+  } finally { dec.close(); }
+}
+function openTrim(pic) {
+  const m = $('#trModal'), view = m.querySelector('.trView canvas'), load = m.querySelector('.trLoad');
+  closeTrim(); tr = { pic };
+  view.style.display = 'none'; load.style.display = ''; load.textContent = 'Reading the clip…';
+  m.querySelectorAll('.trTrack, .trTimes').forEach(el => el.style.visibility = 'hidden');
+  $('#trYes').disabled = true; $('#trReset').style.display = pic.orig ? '' : 'none';
+  m.classList.add('show');
+  const mine = tr;
+  gifFrames(pic.orig ? pic.orig.url : pic.url).then(clip => {
+    if (tr !== mine) return;   // closed or reopened while reading
+    const n = clip.frames.length, t = [0]; clip.delays.forEach(d => t.push(t[t.length - 1] + d / 100));   // t[i]: when frame i starts, t[n]: the end
+    Object.assign(tr, clip, { n, t, a: pic.trim ? Math.min(pic.trim.a, n - 2) : 0, b: pic.trim ? Math.min(pic.trim.b, n - 1) : n - 1, at: 0, timer: 0 });
+    view.width = clip.w; view.height = clip.h; view.style.display = ''; load.style.display = 'none';
+    m.querySelectorAll('.trTrack, .trTimes').forEach(el => el.style.visibility = '');
+    const A = m.querySelector('.trA'), B = m.querySelector('.trB');
+    A.max = B.max = n - 1; A.value = tr.a; B.value = tr.b;
+    drawStrip(); paintTrim(); playTrim(tr.a);
+    $('#trYes').disabled = false;
+  }).catch(e => { if (tr !== mine) return; load.textContent = e.message || 'Could not read the clip'; });
+}
+function drawStrip() {   // a row of evenly spaced frames along the track
+  const cv = $('#trModal .trStrip'), r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
+  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+  const g = cv.getContext('2d'), tmp = document.createElement('canvas'); tmp.width = tr.w; tmp.height = tr.h;
+  const tw = cv.height * tr.w / tr.h, k = Math.max(1, Math.ceil(cv.width / tw));
+  for (let i = 0; i < k; i++) {   // each tile shows the frame its middle sits over, measured the way the handles are
+    const x = (i + .5) / k * cv.width, f = Math.round(Math.min(1, Math.max(0, (x - 7 * dpr) / (cv.width - 14 * dpr))) * (tr.n - 1));
+    tmp.getContext('2d').putImageData(tr.frames[f], 0, 0);
+    g.drawImage(tmp, i * cv.width / k, 0, cv.width / k, cv.height);
+  }
+}
+// positions on the track follow the handles (a range input's thumb centre runs from half a thumb in from
+// each edge), so the shading and the play head line up with the handles exactly
+const trPos = i => `calc(7px + (100% - 14px) * ${tr.n > 1 ? i / (tr.n - 1) : 0})`;
+function paintTrim() {
+  const m = $('#trModal'), l = m.querySelector('.trShade.l'), r = m.querySelector('.trShade.r'), keep = m.querySelector('.trKeep');
+  l.style.width = trPos(tr.a); r.style.left = trPos(tr.b);
+  keep.style.left = `calc(${trPos(tr.a)} - 7px)`; keep.style.right = `calc(100% - ${trPos(tr.b)} - 7px)`;
+  m.querySelector('.trFrom').textContent = 'From ' + tr.t[tr.a].toFixed(1) + ' s';
+  m.querySelector('.trTo').textContent = 'to ' + tr.t[tr.b + 1].toFixed(1) + ' s';
+  m.querySelector('.trLen').textContent = `Keeping ${(tr.t[tr.b + 1] - tr.t[tr.a]).toFixed(1)} s of ${tr.t[tr.n].toFixed(1)} s`;
+  $('#trYes').textContent = tr.a === 0 && tr.b === tr.n - 1 ? (tr.pic.orig ? 'Keep whole clip' : 'Done') : 'Trim';
+}
+function showFrame(i) {
+  tr.at = i; $('#trModal .trView canvas').getContext('2d').putImageData(tr.frames[i], 0, 0);
+  $('#trModal .trHead').style.left = trPos(i);
+}
+function playTrim(from) {   // loops the kept stretch with each frame's own delay
+  clearTimeout(tr.timer);
+  const step = i => { if (!tr || !tr.frames) return; showFrame(i); tr.timer = setTimeout(() => step(i >= tr.b ? tr.a : i + 1), tr.delays[i] * 10); };
+  step(from);
+}
+function closeTrim() { if (tr) clearTimeout(tr.timer); tr = null; $('#trModal').classList.remove('show'); }
+{
+  const m = $('#trModal'), A = m.querySelector('.trA'), B = m.querySelector('.trB');
+  // dragging a handle shows the frame under it; letting go plays the kept stretch again from its start
+  A.oninput = () => { if (!tr || !tr.frames) return; tr.a = Math.min(+A.value, tr.b - 1); A.value = tr.a; clearTimeout(tr.timer); showFrame(tr.a); paintTrim(); };
+  B.oninput = () => { if (!tr || !tr.frames) return; tr.b = Math.max(+B.value, tr.a + 1); B.value = tr.b; clearTimeout(tr.timer); showFrame(tr.b); paintTrim(); };
+  A.onchange = B.onchange = () => { if (tr && tr.frames) playTrim(tr.a); };
+  $('#trNo').onclick = closeTrim;
+  m.onclick = e => { if (e.target.id === 'trModal') closeTrim(); };
+  $('#trReset').onclick = () => {   // back to the clip as it was before this edit's trims
+    const p = tr && tr.pic; if (!p || !p.orig) return;
+    for (const k of ['src', 'data', 'url']) { if (p.orig[k] !== undefined) p[k] = p.orig[k]; else delete p[k]; }
+    delete p.orig; delete p.trim; closeTrim(); updateStep(activeStep); toast('Trim undone');
+  };
+  $('#trYes').onclick = async () => {
+    if (!tr || !tr.frames) return;
+    const p = tr.pic, { a, b } = tr;
+    if (a === 0 && b === tr.n - 1) { if (p.orig) $('#trReset').onclick(); else closeTrim(); return; }   // nothing cut
+    $('#trYes').disabled = true; $('#trYes').textContent = 'Trimming…';
+    await new Promise(r => requestAnimationFrame(() => setTimeout(r)));   // let the button repaint before the encoder holds the page
+    try {
+      const fr = tr.frames.slice(a, b + 1).map(f => f.data);
+      const bytes = encodeGif(tr.w, tr.h, fr, medianCut(fr, 256), tr.delays.slice(a, b + 1));
+      if (bytes.length > GIF_MAX_BYTES) throw new Error('The trimmed clip is still over 12 MB');
+      const url = bytesToDataUrl(bytes, 'image/gif');
+      if (!p.orig) p.orig = { src: p.src, data: p.data, url: p.url };   // kept until save, for Undo trim
+      p.data = url; p.url = url; delete p.src; p.trim = { a, b };
+      closeTrim(); updateStep(activeStep);
+      toast('Clip trimmed. It becomes permanent when you save.');
+    } catch (e) { toast(e.message || 'Could not trim the clip', true); if (tr) { $('#trYes').disabled = false; paintTrim(); } }
+  };
 }
 const readDataUrl = f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(new Error('Could not read the file')); r.readAsDataURL(f); });
 async function addFiles(i, files) {
@@ -2785,6 +2939,7 @@ let toastT;
 function toast(msg, bad) { const t = $('#toast'); t.textContent = msg; t.className = 'show' + (bad ? ' bad' : ''); clearTimeout(toastT); toastT = setTimeout(() => t.className = '', 2600); }
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
+    if (tr) { closeTrim(); return; }
     if (mkPop) { closeMkPop(); return; }
     if ($('#fbModal').classList.contains('show')) { $('#fbModal').classList.remove('show'); return; }
     if ($('#dcPop').classList.contains('show')) { $('#dcPop').classList.remove('show'); return; }
