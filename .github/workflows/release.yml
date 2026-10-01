@@ -1,0 +1,79 @@
+# Publishes a Stratlab release from GitHub's own Windows machine, so it can be started from any computer
+# (the installer needs Inno Setup, which only runs on Windows). Same steps as tools\release.ps1: bump
+# version.json, build the installer and its checksum, commit + tag, and create the release the in-app
+# Update button reads.
+#   From a terminal:  gh workflow run release.yml -f version=1.0.10
+#   Or on GitHub:     Actions > Release > Run workflow
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "New version (x.y.z)"
+        required: true
+      notes:
+        description: "Release notes (optional)"
+        required: false
+
+permissions:
+  contents: write
+
+concurrency: release
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      VERSION: ${{ inputs.version }}
+      NOTES: ${{ inputs.notes }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Check the version
+        shell: powershell
+        run: |
+          if ($env:VERSION -notmatch '^\d+\.\d+\.\d+$') { throw "version must be x.y.z (got '$env:VERSION')" }
+          git fetch --tags --quiet
+          if (git tag -l "v$env:VERSION") { throw "tag v$env:VERSION already exists; pick a new version" }
+
+      - name: Bump version.json
+        shell: powershell
+        run: |
+          $vj = Get-Content 'version.json' -Raw | ConvertFrom-Json
+          $vj.version = $env:VERSION
+          $vj | ConvertTo-Json | Set-Content 'version.json' -Encoding ASCII
+
+      - name: Install Inno Setup if missing
+        shell: powershell
+        run: |
+          $have = @("${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe", "$env:ProgramFiles\Inno Setup 6\ISCC.exe") | Where-Object { Test-Path $_ }
+          if (-not $have) { choco install innosetup -y --no-progress; if ($LASTEXITCODE -ne 0) { throw 'Inno Setup install failed' } }
+
+      - name: Build the installer
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools\build_installer.ps1
+
+      - name: Commit, tag and push
+        shell: powershell
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add version.json
+          git commit -q -m "Stratlab v$env:VERSION"
+          git tag -a "v$env:VERSION" -m "Stratlab v$env:VERSION"
+          git push origin HEAD:main
+          if ($LASTEXITCODE -ne 0) { throw 'push failed' }
+          git push origin "v$env:VERSION"
+          if ($LASTEXITCODE -ne 0) { throw 'tag push failed' }
+
+      - name: Publish the release
+        shell: powershell
+        run: |
+          $tag = "v$env:VERSION"; $exe = "dist\Stratlab-Setup-$env:VERSION.exe"
+          $notes = if ($env:NOTES) { $env:NOTES } else { "Stratlab $tag. Download Stratlab-Setup-$env:VERSION.exe to install or update (Windows may show a SmartScreen warning: More info, Run anyway)." }
+          gh release create $tag $exe "$exe.sha256" --title "Stratlab $tag" --notes $notes --latest
+          if ($LASTEXITCODE -ne 0) { throw 'release failed' }

@@ -22,7 +22,9 @@ powershell -ExecutionPolicy Bypass -File tools\build_installer.ps1
 The setup file lands in `dist\` together with a `.sha256` checksum: publish a GitHub release tagged
 `v<version>` with both files attached. With git and the GitHub CLI installed (`winget install Git.Git GitHub.cli`,
 then `gh auth login --web` once), `tools\release.ps1 -Version 1.0.1` does all of that in one go: bumps
-`version.json`, builds, commits, tags, pushes and publishes the release. Without Inno Setup,
+`version.json`, builds, commits, tags, pushes and publishes the release. From a computer without Windows (or without Inno Setup),
+the **Release** GitHub Action does the same on GitHub's Windows machine: `gh workflow run release.yml -f version=1.0.1`
+(or Actions › Release › Run workflow on GitHub). Without Inno Setup,
 `tools\build_portable.ps1` builds `dist\Stratlab-<version>.zip` instead: unzip anywhere, run `Install.bat` once.
 
 **Updates**: with `"repo": "owner/name"` set in `version.json`, the app checks that repository's
