@@ -2,7 +2,7 @@
 #   assets\app-icon.png + assets\app.ico   the molly icon (drawn here, no download)
 #   launch.vbs                             starts editor.ps1 with no console window at all
 #   Desktop + Start Menu "Stratlab"         shortcut with the icon (pin it to the taskbar from there)
-#   Startup "Stratlab (background)"         runs launch-bg.vbs at login so the server is always up
+#   Startup "Stratlab (background)"         runs startup.vbs at login so the server is always up (tray icon)
 # Run:  powershell -ExecutionPolicy Bypass -File tools\install_shortcut.ps1
 
 $ErrorActionPreference = 'Stop'
@@ -67,7 +67,7 @@ $startup = [Environment]::GetFolderPath('Startup')
 $oldBg = Join-Path $startup 'The Lineup Lab (background).lnk'; if (Test-Path $oldBg) { Remove-Item $oldBg -Force }   # earlier name
 $bg = $shell.CreateShortcut((Join-Path $startup 'Stratlab (background).lnk'))
 $bg.TargetPath = "$env:WINDIR\System32\wscript.exe"
-$bg.Arguments = "`"$(Join-Path $root 'launch-bg.vbs')`""
+$bg.Arguments = "`"$(Join-Path $root 'startup.vbs')`""   # startup.vbs: honours "Start with Windows"
 $bg.WorkingDirectory = $root
 $bg.IconLocation = "$ico,0"
 $bg.Description = 'Starts the Stratlab server in the background at login (delete this shortcut to stop that)'

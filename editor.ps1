@@ -11,7 +11,7 @@
 #   POST /api/monitor      { monitor } -> config.json; a running overlay moves on its own
 #   GET  /assets/...       pictures and icons
 #   -Background            start the server only, no window (used at login)
-param([int]$Port = 47821, [switch]$NoBrowser, [switch]$Background, [string]$Import)   # -Import <pack>: open the app with that pack's import preview
+param([int]$Port = 47821, [switch]$NoBrowser, [switch]$Background, [switch]$AtLogin, [string]$Import)   # -AtLogin: started by the Startup shortcut (honours "Start with Windows")   # -Import <pack>: open the app with that pack's import preview
 
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
@@ -72,9 +72,16 @@ function Get-Settings {
     $c = if (Test-Path $configPath) { try { Read-Json $configPath } catch { $null } } else { $null }
     $w = 372; if ($c -and "$($c.width)" -match '^\d+$') { $w = [int]$c.width }
     $a = 'top-right'; if ($c -and "$($c.anchor)" -match '^(top|bottom)-(left|right)$') { $a = [string]$c.anchor }
-    [ordered]@{ width = $w; anchor = $a }
+    $auto = -not ($c -and $c.PSObject.Properties['autostart'] -and $c.autostart -eq $false)   # start with Windows: on unless turned off
+    [ordered]@{ width = $w; anchor = $a; autostart = $auto }
 }
 function Overlay-Pid { $pf = Join-Path $root 'overlay.pid'; if (Test-Path $pf) { try { (Get-Process -Id ([int](Get-Content $pf -Raw).Trim()) -ErrorAction Stop).Id } catch { $null } } else { $null } }
+function Toggle-Overlay {   # start it, or stop it; returns whether it is now running
+    $opid = Overlay-Pid
+    if ($opid) { Stop-Process -Id $opid -Force -ErrorAction SilentlyContinue; Remove-Item (Join-Path $root 'overlay.pid') -ErrorAction SilentlyContinue; return $false }
+    Start-Process wscript.exe -ArgumentList "`"$(Join-Path $root 'overlay.vbs')`"" -WorkingDirectory $root   # via .vbs: no console flash
+    $true
+}
 function Restart-Overlay {
     $opid = Overlay-Pid; if (-not $opid) { return $false }
     Stop-Process -Id $opid -Force -ErrorAction SilentlyContinue; Remove-Item (Join-Path $root 'overlay.pid') -ErrorAction SilentlyContinue
@@ -91,6 +98,7 @@ function Set-Settings($req) {
         $old = (Get-Settings).width; & $set 'width' $w; if ($w -ne $old) { $restart = $true }
     }
     if ($req.anchor) { $a = [string]$req.anchor; if ($a -notmatch '^(top|bottom)-(left|right)$') { throw 'Bad corner' }; & $set 'anchor' $a }
+    if ($null -ne $req.autostart) { & $set 'autostart' ([bool]$req.autostart) }
     $c | ConvertTo-Json -Depth 5 | Set-Content $configPath -Encoding UTF8
     $restarted = if ($restart) { Restart-Overlay } else { $false }
     $out = Get-Settings; $out['restarted'] = [bool]$restarted; $out
@@ -583,7 +591,7 @@ function Send-Feedback($req) {
     $text = Clip-Text $req.text 1500; if ($text.Length -lt 3) { throw 'Write a little more first' }
     $who = Clip-Text $req.contact 60; if (-not $who) { $who = 'anonymous' }
     $inst = (Read-Votes).installId.Substring(0, 8)
-    $content = "**Feedback** from $who  |  Stratlab v$($APP.version)  |  install $inst`n" + ($text -replace '@', '@​')   # no pings
+    $content = "**Feedback** from $who  |  Stratlab v$($APP.version)  |  install $inst`n" + ($text -replace '@', ('@' + [char]0x200B))   # no pings
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     $body = @{ content = $content; allowed_mentions = @{ parse = @() } } | ConvertTo-Json -Compress -Depth 4
     Invoke-WebRequest $hook -Method Post -ContentType 'application/json' -Body ([Text.Encoding]::UTF8.GetBytes($body)) -UseBasicParsing -Headers @{ 'User-Agent' = 'Stratlab' } -TimeoutSec 20 | Out-Null
@@ -594,6 +602,8 @@ function Open-Window([string]$u) {
     if (-not (Test-Path $edge)) { $edge = "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe" }
     if (Test-Path $edge) { Start-Process $edge -ArgumentList "--app=$u", '--window-size=1280,880' } else { Start-Process $u }
 }
+# started at login while "Start with Windows" is off: do nothing
+if ($AtLogin -and -not (Get-Settings).autostart) { exit }
 # already running (the server outlives its window)? then just open a window to it and stop here
 try {
     $alive = Invoke-WebRequest "http://localhost:$Port/api/ping" -UseBasicParsing -TimeoutSec 2
@@ -621,12 +631,57 @@ if ($Import -and (Test-Path $Import)) { try { $pendingPack = [IO.File]::ReadAllB
 if ($Import) { Open-Window "$url?import=1" }
 elseif (-not ($NoBrowser -or $Background)) { Open-Window $url }
 
-$lastPing = $null; $started = Get-Date
+# --- tray icon: the server runs in the background, so it shows itself in the notification area ---------
+# Left click opens the app; the menu has the overlay switch, Start with Windows and Quit. Its events are
+# handled while the request loop below waits (DoEvents), on this same thread, so they can touch the
+# server's state directly. Test instances (-NoBrowser) get no icon.
+$tray = $null
+function Update-Tray {
+    if (-not $tray) { return }
+    $on = $null -ne (Overlay-Pid)
+    $trayOverlay.Checked = $on; $trayAuto.Checked = (Get-Settings).autostart
+    $t = "Stratlab v$($APP.version) $([char]0xB7) overlay $(if ($on) { 'on' } else { 'off' })"; if ($t.Length -gt 63) { $t = $t.Substring(0, 63) }
+    $tray.Text = $t
+}
+if (-not $NoBrowser) {
+    try {
+        $tray = New-Object System.Windows.Forms.NotifyIcon
+        $icoPath = Join-Path $root 'assets\app.ico'
+        $tray.Icon = if (Test-Path $icoPath) { New-Object System.Drawing.Icon $icoPath } else { [System.Drawing.SystemIcons]::Application }
+        $menu = New-Object System.Windows.Forms.ContextMenuStrip
+        $head = $menu.Items.Add("Stratlab v$($APP.version)"); $head.Enabled = $false
+        [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+        $trayOpen = $menu.Items.Add('Open Stratlab'); $trayOpen.Font = New-Object System.Drawing.Font $trayOpen.Font, ([System.Drawing.FontStyle]::Bold)
+        $trayOverlay = $menu.Items.Add('Overlay')
+        $trayAuto = $menu.Items.Add('Start with Windows')
+        [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+        $trayQuit = $menu.Items.Add('Quit Stratlab')
+        $trayOpen.Add_Click({ Open-Window $url })
+        $trayOverlay.Add_Click({ [void](Toggle-Overlay); Start-Sleep -Milliseconds 300; Update-Tray })
+        $trayAuto.Add_Click({ try { [void](Set-Settings ([pscustomobject]@{ autostart = (-not (Get-Settings).autostart) })) } catch {}; Update-Tray })
+        $trayQuit.Add_Click({   # everything stops: the overlay too, then this server
+            $opid = Overlay-Pid; if ($opid) { Stop-Process -Id $opid -Force -ErrorAction SilentlyContinue; Remove-Item (Join-Path $root 'overlay.pid') -ErrorAction SilentlyContinue }
+            $script:running = $false
+        })
+        $menu.Add_Opening({ Update-Tray })
+        $tray.ContextMenuStrip = $menu
+        $tray.Add_MouseClick({ param($s, $e) if ($e.Button -eq [System.Windows.Forms.MouseButtons]::Left) { Open-Window $url } })
+        Update-Tray
+        $tray.Visible = $true
+    } catch { Write-Host "tray: $($_.Exception.Message)"; $tray = $null }
+}
+
+$lastPing = $null; $started = Get-Date; $trayAt = Get-Date
 $stateStamp = ''; $stateJson = $null
 $running = $true
 while ($running) {
     $ar = $listener.BeginGetContext($null, $null)
-    while (-not $ar.AsyncWaitHandle.WaitOne(1000)) {
+    while (-not $ar.AsyncWaitHandle.WaitOne(50)) {
+        if ($tray) {   # the tray's clicks and menu run here
+            [System.Windows.Forms.Application]::DoEvents()
+            if (((Get-Date) - $trayAt).TotalSeconds -ge 5) { $trayAt = Get-Date; Update-Tray }   # keep the tooltip current
+        }
+        if (-not $running) { break }   # Quit from the tray
         # the server stays up when the window closes, so the app can be reopened any time.
         # Only a test instance (-NoBrowser) winds down, 10 minutes after its last ping.
         if ($NoBrowser -and ((Get-Date) - $(if ($lastPing) { $lastPing } else { $started })).TotalMinutes -gt 10) { $running = $false; break }
@@ -695,14 +750,8 @@ while ($running) {
             '^/api/overlay$' {   # GET: is the overlay running?  POST {toggle:true}: start it or stop it
                 # the overlay writes its process id to overlay.pid; checking that is instant (a WMI process
                 # scan took hundreds of ms and stalled every other request while it ran)
-                $pidFile = Join-Path $root 'overlay.pid'
-                $op = $null
-                if (Test-Path $pidFile) { try { $op = Get-Process -Id ([int](Get-Content $pidFile -Raw).Trim()) -ErrorAction Stop } catch { $op = $null } }
-                if ($ctx.Request.HttpMethod -eq 'POST') {
-                    if ($op) { Stop-Process -Id $op.Id -Force; Remove-Item $pidFile -ErrorAction SilentlyContinue; $on = $false }
-                    else { Start-Process wscript.exe -ArgumentList "`"$(Join-Path $root 'overlay.vbs')`"" -WorkingDirectory $root; $on = $true }   # via .vbs: no console flash
-                    Send-Json $ctx @{ running = $on; display = (Get-DisplayMode) }
-                } else { Send-Json $ctx @{ running = ($null -ne $op); display = (Get-DisplayMode) } }   # display: the game's display mode, see Get-DisplayMode
+                if ($ctx.Request.HttpMethod -eq 'POST') { $on = Toggle-Overlay; Send-Json $ctx @{ running = $on; display = (Get-DisplayMode) } }
+                else { Send-Json $ctx @{ running = ($null -ne (Overlay-Pid)); display = (Get-DisplayMode) } }   # display: the game's display mode, see Get-DisplayMode
             }
             '^/assets/'      {
                 $rel = [Uri]::UnescapeDataString($path.Substring(1)) -replace '/', '\'
@@ -720,4 +769,5 @@ while ($running) {
         Write-Host "error: $($_.Exception.Message)"
     }
 }
+if ($tray) { $tray.Visible = $false; $tray.Dispose() }   # or a dead icon lingers in the tray until hovered
 $listener.Stop()

@@ -850,6 +850,9 @@
   .setRow { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.07); }
   .setRow .monHead b { float: right; font-weight: 600; color: var(--text); }
   #sizeRange { width: 100%; margin: 8px 0 2px; }
+  .setCheck { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+  .setCheck input { margin-top: 2px; accent-color: var(--accent); width: 15px; height: 15px; flex: none; }
+  .setCheck b { display: block; font-size: 12.5px; font-weight: 600; } .setCheck small { display: block; font-size: 11px; color: var(--dim); margin-top: 2px; line-height: 1.35; }
   .corners { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
   .corners button { padding: 7px 0; font-size: 15px; line-height: 1; background: #1c1c20; color: var(--dim); }
   .corners button:hover { color: var(--text); } .corners button.on { background: rgba(255,70,85,.16); color: #fff; box-shadow: inset 0 0 0 1.5px rgba(255,70,85,.7); }
@@ -963,6 +966,7 @@
       <div class="monPop" id="monPop">
         <div class="monHead">Overlay shows on</div><div class="monMap" id="monMap"></div><div class="monHint">Click a screen. A running overlay moves right away.</div>
         <div class="setRow"><div class="monHead">Overlay size <b id="sizeVal"></b></div><input type="range" id="sizeRange" min="280" max="900" step="4"><div class="monHint">Everything on the card scales with it. A running overlay restarts to apply it.</div></div>
+        <div class="setRow"><label class="setCheck"><input type="checkbox" id="autoStart"><span><b>Start with Windows</b><small>Runs in the background with a tray icon, so the app opens instantly</small></span></label></div>
         <div class="setRow"><div class="monHead">Corner</div><div class="corners" id="corners"><button data-a="top-left" title="Top left">◤</button><button data-a="top-right" title="Top right">◥</button><button data-a="bottom-left" title="Bottom left">◣</button><button data-a="bottom-right" title="Bottom right">◢</button></div></div>
       </div>
     </div>
@@ -1240,6 +1244,7 @@ async function loadSettings() {
   const r = $('#sizeRange'); if (document.activeElement !== r) r.value = settings.width;
   $('#sizeVal').textContent = Math.round(settings.width / 372 * 100) + '%';
   $$('#corners button').forEach(b => b.classList.toggle('on', b.dataset.a === settings.anchor));
+  $('#autoStart').checked = settings.autostart !== false;
 }
 async function saveSettings(patch) {
   try {
@@ -1247,12 +1252,14 @@ async function saveSettings(patch) {
     if (r.error) throw new Error(r.error);
     settings = r; loadSettings();
     if (patch.width != null) toast(r.restarted ? 'Overlay size saved. The overlay restarted with it.' : 'Overlay size saved.');
+    else if (patch.autostart != null) toast(patch.autostart ? 'Stratlab will start with Windows.' : "Stratlab won't start with Windows. Open it from the Start menu.");
     else toast('Overlay corner saved.');
   } catch (e) { toast(e.message, true); }
 }
 $('#sizeRange').oninput = () => { $('#sizeVal').textContent = Math.round($('#sizeRange').value / 372 * 100) + '%'; };
 $('#sizeRange').onchange = () => { clearTimeout(sizeT); sizeT = setTimeout(() => saveSettings({ width: +$('#sizeRange').value }), 250); };
 $$('#corners button').forEach(b => b.onclick = e => { e.stopPropagation(); saveSettings({ anchor: b.dataset.a }); });
+$('#autoStart').onchange = () => saveSettings({ autostart: $('#autoStart').checked });
 loadSettings();
 // the Discord menu and the feedback box
 $('#btnDiscord').onclick = e => { e.preventDefault(); e.stopPropagation(); closePacksPage(); $('#monPop').classList.remove('show'); $('#dcPop').classList.toggle('show'); };

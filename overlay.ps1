@@ -422,8 +422,14 @@ if (Test-Path $configPath) {
 }
 if ($ScreenshotPath -and $env:LINEUP_TEST_WIDTH) { $cfg.width = [int]$env:LINEUP_TEST_WIDTH }   # test renders at other sizes, config untouched
 function Save-Config {
-    [ordered]@{ monitor = $cfg.monitor; width = $cfg.width; anchor = $cfg.anchor; offsetX = $cfg.offsetX; offsetY = $cfg.offsetY
-                autoDetect = $cfg.autoDetect; autoShow = $cfg.autoShow; onlyInGame = $cfg.onlyInGame; hotkeys = $cfg.hotkeys } | ConvertTo-Json | Set-Content $configPath -Encoding UTF8
+    # merged into what is already there: config.json also holds the app's own keys (autostart...), which the
+    # overlay knows nothing about and must not drop
+    $out = [ordered]@{}
+    if (Test-Path $configPath) { try { $old = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json; foreach ($p in $old.PSObject.Properties) { $out[$p.Name] = $p.Value } } catch {} }
+    $mine = [ordered]@{ monitor = $cfg.monitor; width = $cfg.width; anchor = $cfg.anchor; offsetX = $cfg.offsetX; offsetY = $cfg.offsetY
+                        autoDetect = $cfg.autoDetect; autoShow = $cfg.autoShow; onlyInGame = $cfg.onlyInGame; hotkeys = $cfg.hotkeys }
+    foreach ($k in $mine.Keys) { $out[$k] = $mine[$k] }
+    $out | ConvertTo-Json -Depth 5 | Set-Content $configPath -Encoding UTF8
     if ($ST -and $ST.ContainsKey('cfgStamp')) { $ST.cfgStamp = (Get-Item $configPath).LastWriteTimeUtc }   # our own write: not a change from the app
 }
 

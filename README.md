@@ -76,9 +76,15 @@ window; the backend is a tiny local server in `editor.ps1` (http://localhost:478
 keeps running after the window closes, so the shortcut, the Start menu entry or a taskbar pin of
 the window open instantly at any time. Launching again while it runs just opens another window.
 
+While the server runs it shows a **tray icon** (the flame, in the notification area; Windows 11 may
+tuck new icons under the ^ arrow, drag it out to keep it visible). Left-click opens the app; the menu
+has **Overlay** (on/off), **Start with Windows** and **Quit Stratlab** (stops the overlay and the server).
+
 A Startup-folder shortcut, **Stratlab (background)**, starts the server hidden at login
-(`launch-bg.vbs`, which runs `editor.ps1 -Background`). To stop that, delete the shortcut from
-`shell:startup`. `tools\install_shortcut.ps1` rebuilds the icon and all shortcuts if they are lost.
+(`startup.vbs`, which runs `editor.ps1 -Background -AtLogin`). With **Start with Windows** off (tray
+menu or the app's Settings, saved as `"autostart": false` in `config.json`) that run exits at once; the
+shortcut itself stays so an update cannot turn the setting back on. `tools\install_shortcut.ps1`
+rebuilds the icon and all shortcuts if they are lost.
 
 The **Overlay** button in the header starts and stops the in-game overlay.
 

@@ -33,7 +33,7 @@ if (-not (Test-Path '.git')) {
     git remote add origin "https://github.com/$($vj.repo).git"
 }
 git add -A
-git diff --cached --quiet; if ($LASTEXITCODE -ne 0) { git commit -q -m "Stratlab $tag" }
+git diff --cached --quiet; if ($LASTEXITCODE -ne 0) { git commit -q -m "Stratlab $tag" -m 'Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>' }
 git tag -a $tag -m "Stratlab $tag"
 git push -u origin main; if ($LASTEXITCODE -ne 0) { throw 'push failed' }
 git push origin $tag; if ($LASTEXITCODE -ne 0) { throw 'tag push failed' }

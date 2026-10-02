@@ -9,7 +9,7 @@ if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
 New-Item -ItemType Directory -Force $app, "$app\data", "$app\assets", "$app\tools", "$app\web" | Out-Null
 
 # the same file set the installer ships: app, official art, game data; never the user's library or pictures
-foreach ($f in 'editor.ps1', 'overlay.ps1', 'launch.vbs', 'launch-bg.vbs', 'overlay.vbs', 'import.vbs', 'Start Overlay.bat', 'version.json', 'README.md') { Copy-Item (Join-Path $root $f) $app }
+foreach ($f in 'editor.ps1', 'overlay.ps1', 'launch.vbs', 'launch-bg.vbs', 'startup.vbs', 'overlay.vbs', 'import.vbs', 'Start Overlay.bat', 'version.json', 'README.md') { Copy-Item (Join-Path $root $f) $app }
 Copy-Item (Join-Path $root 'web\*') "$app\web" -Recurse
 foreach ($d in 'icons', 'maps', 'roles') { Copy-Item (Join-Path $root "assets\$d") "$app\assets\$d" -Recurse }
 Copy-Item (Join-Path $root 'assets\app.ico'), (Join-Path $root 'assets\app-icon.png') "$app\assets"

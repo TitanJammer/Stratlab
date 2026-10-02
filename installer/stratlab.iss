@@ -38,6 +38,7 @@ Source: "..\editor.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\overlay.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\launch.vbs"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\launch-bg.vbs"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\startup.vbs"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\overlay.vbs"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\import.vbs"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Start Overlay.bat"; DestDir: "{app}"; Flags: ignoreversion
@@ -64,7 +65,7 @@ Name: "{group}\Stratlab"; Filename: "{sys}\wscript.exe"; Parameters: """{app}\la
 Name: "{group}\Start the overlay"; Filename: "{sys}\wscript.exe"; Parameters: """{app}\overlay.vbs"""; WorkingDir: "{app}"; IconFilename: "{app}\assets\app.ico"
 Name: "{group}\Uninstall Stratlab"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\Stratlab"; Filename: "{sys}\wscript.exe"; Parameters: """{app}\launch.vbs"""; WorkingDir: "{app}"; IconFilename: "{app}\assets\app.ico"; Tasks: desktopicon
-Name: "{userstartup}\Stratlab (background)"; Filename: "{sys}\wscript.exe"; Parameters: """{app}\launch-bg.vbs"""; WorkingDir: "{app}"; IconFilename: "{app}\assets\app.ico"; Tasks: startup
+Name: "{userstartup}\Stratlab (background)"; Filename: "{sys}\wscript.exe"; Parameters: """{app}\startup.vbs"""; WorkingDir: "{app}"; IconFilename: "{app}\assets\app.ico"; Tasks: startup
 
 [Registry]
 ; double-clicking a .stratlab pack opens it in the app (per-user, removed on uninstall)
