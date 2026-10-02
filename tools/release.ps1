@@ -11,6 +11,13 @@ Set-Location $root
 foreach ($tool in 'git', 'gh') { if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) { throw "$tool is not installed. winget install Git.Git GitHub.cli" } }
 $vj = Get-Content 'version.json' -Raw | ConvertFrom-Json
 if (-not $vj.repo) { throw 'version.json has no "repo" (owner/name)' }
+# releases can also come from GitHub (Actions > Release) or another computer: stop before building
+# anything when GitHub has commits this copy does not, instead of failing halfway at the push
+if (Test-Path '.git') {
+    git fetch -q origin 2>$null
+    $behind = git rev-list --count 'HEAD..origin/main' 2>$null
+    if ($LASTEXITCODE -eq 0 -and [int]$behind -gt 0) { throw "GitHub has $behind newer commit(s). Run  git pull --rebase  first, then release again." }
+}
 if ($Version) {
     if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw "version must be x.y.z (got '$Version')" }
     $vj.version = $Version
